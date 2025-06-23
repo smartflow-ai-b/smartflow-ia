@@ -18,11 +18,11 @@ interface Project {
   timeline: string;
   status: string;
   created_at: string;
-  profiles: {
-    first_name: string;
-    last_name: string;
+  user_profile?: {
+    first_name: string | null;
+    last_name: string | null;
     email: string;
-  };
+  } | null;
 }
 
 const AdminDashboard = () => {
@@ -46,28 +46,41 @@ const AdminDashboard = () => {
 
   const fetchProjects = async () => {
     try {
-      const { data, error } = await supabase
+      // First get all projects
+      const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select(`
-          *,
-          profiles:user_id (
-            first_name,
-            last_name,
-            email
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
+      if (projectsError) {
+        console.error('Error fetching projects:', projectsError);
         toast({
           title: "Errore",
           description: "Impossibile caricare i progetti",
           variant: "destructive"
         });
-      } else {
-        setProjects(data || []);
+        return;
       }
+
+      // Then get user profiles for each project
+      const projectsWithProfiles = await Promise.all(
+        (projectsData || []).map(async (project) => {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, email')
+            .eq('id', project.user_id)
+            .single();
+
+          return {
+            ...project,
+            user_profile: profileData
+          };
+        })
+      );
+
+      setProjects(projectsWithProfiles);
     } catch (error) {
+      console.error('Error in fetchProjects:', error);
       toast({
         title: "Errore",
         description: "Si è verificato un errore imprevisto",
@@ -216,7 +229,7 @@ const AdminDashboard = () => {
                           {project.timeline && <Badge variant="outline">{project.timeline}</Badge>}
                         </div>
                         <p className="text-sm text-gray-500">
-                          Cliente: {project.profiles?.first_name} {project.profiles?.last_name} ({project.profiles?.email})
+                          Cliente: {project.user_profile?.first_name || 'N/A'} {project.user_profile?.last_name || ''} ({project.user_profile?.email || 'Email non disponibile'})
                         </p>
                         <p className="text-sm text-gray-500">
                           Creato: {new Date(project.created_at).toLocaleDateString('it-IT')}
