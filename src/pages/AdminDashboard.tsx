@@ -1,0 +1,274 @@
+
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { ArrowLeft, Users, FolderOpen, MessageSquare, Crown } from 'lucide-react';
+
+interface Project {
+  id: string;
+  title: string;
+  description: string;
+  project_type: string;
+  budget_range: string;
+  timeline: string;
+  status: string;
+  created_at: string;
+  profiles: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+}
+
+const AdminDashboard = () => {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user, isAdmin, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!authLoading && (!user || !isAdmin)) {
+      navigate('/');
+    }
+  }, [user, isAdmin, authLoading, navigate]);
+
+  useEffect(() => {
+    if (user && isAdmin) {
+      fetchProjects();
+    }
+  }, [user, isAdmin]);
+
+  const fetchProjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select(`
+          *,
+          profiles:user_id (
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        toast({
+          title: "Errore",
+          description: "Impossibile caricare i progetti",
+          variant: "destructive"
+        });
+      } else {
+        setProjects(data || []);
+      }
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore imprevisto",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateProjectStatus = async (projectId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ status: newStatus })
+        .eq('id', projectId);
+
+      if (error) {
+        toast({
+          title: "Errore",
+          description: "Impossibile aggiornare lo stato",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Aggiornato",
+          description: "Stato del progetto aggiornato con successo"
+        });
+        fetchProjects();
+      }
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore imprevisto",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'in_progress': return 'bg-blue-100 text-blue-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'rejected': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'pending': return 'In Attesa';
+      case 'in_progress': return 'In Corso';
+      case 'completed': return 'Completato';
+      case 'rejected': return 'Rifiutato';
+      default: return status;
+    }
+  };
+
+  if (authLoading || loading) {
+    return <div className="min-h-screen flex items-center justify-center">Caricamento...</div>;
+  }
+
+  if (!isAdmin) {
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-electric-blue-50 to-smart-purple-50 p-4">
+      <div className="max-w-7xl mx-auto">
+        <Card className="glass-card mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/')}
+                className="p-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <div className="flex items-center gap-2">
+                <Crown className="w-6 h-6 text-yellow-500" />
+                <CardTitle className="text-2xl bg-gradient-to-r from-electric-blue-600 to-smart-purple-600 bg-clip-text text-transparent">
+                  Dashboard Amministratore
+                </CardTitle>
+              </div>
+              <div></div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="glass-card">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <FolderOpen className="w-8 h-8 text-electric-blue-500" />
+                <div>
+                  <p className="text-2xl font-bold">{projects.length}</p>
+                  <p className="text-gray-600">Progetti Totali</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <Users className="w-8 h-8 text-smart-purple-500" />
+                <div>
+                  <p className="text-2xl font-bold">{projects.filter(p => p.status === 'pending').length}</p>
+                  <p className="text-gray-600">In Attesa</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <MessageSquare className="w-8 h-8 text-green-500" />
+                <div>
+                  <p className="text-2xl font-bold">{projects.filter(p => p.status === 'in_progress').length}</p>
+                  <p className="text-gray-600">In Corso</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle>Progetti</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {projects.map((project) => (
+                <Card key={project.id} className="border">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg mb-2">{project.title}</h3>
+                        <p className="text-gray-600 mb-2">{project.description}</p>
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          <Badge variant="outline">{project.project_type}</Badge>
+                          {project.budget_range && <Badge variant="outline">{project.budget_range}</Badge>}
+                          {project.timeline && <Badge variant="outline">{project.timeline}</Badge>}
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          Cliente: {project.profiles?.first_name} {project.profiles?.last_name} ({project.profiles?.email})
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Creato: {new Date(project.created_at).toLocaleDateString('it-IT')}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge className={getStatusColor(project.status)}>
+                          {getStatusText(project.status)}
+                        </Badge>
+                        <div className="flex gap-2">
+                          {project.status === 'pending' && (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => updateProjectStatus(project.id, 'in_progress')}
+                                className="bg-blue-500 hover:bg-blue-600"
+                              >
+                                Accetta
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => updateProjectStatus(project.id, 'rejected')}
+                              >
+                                Rifiuta
+                              </Button>
+                            </>
+                          )}
+                          {project.status === 'in_progress' && (
+                            <Button
+                              size="sm"
+                              onClick={() => updateProjectStatus(project.id, 'completed')}
+                              className="bg-green-500 hover:bg-green-600"
+                            >
+                              Completa
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {projects.length === 0 && (
+                <p className="text-center text-gray-500 py-8">Nessun progetto trovato</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default AdminDashboard;
