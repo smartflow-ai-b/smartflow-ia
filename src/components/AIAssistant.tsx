@@ -109,7 +109,7 @@ const AIAssistant = () => {
           {/* Quick questions */}
           {messages.length === 1 && (
             <div className="p-4 border-t bg-gray-50">
-              <p className="text-sm text-gray-600 mb-2">Domande frequ
+              <p className="text-sm text-gray-600 mb-2">Domande frequenti:</p>
               <div className="flex flex-wrap gap-2">
                 {quickQuestions.map((question, index) => (
                   <Button
