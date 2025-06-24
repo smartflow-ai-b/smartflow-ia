@@ -1,13 +1,14 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, User, Crown, Menu, X, Settings } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const Header = () => {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogoClick = () => {
@@ -17,8 +18,32 @@ const Header = () => {
   };
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
+    console.log('Attempting to sign out...');
+    try {
+      const { error } = await signOut();
+      if (error) {
+        console.error('Sign out error:', error);
+        toast({
+          title: "Errore",
+          description: "Impossibile effettuare il logout. Riprova.",
+          variant: "destructive"
+        });
+      } else {
+        console.log('Sign out successful');
+        toast({
+          title: "Logout effettuato",
+          description: "Sei stato disconnesso con successo.",
+        });
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('Unexpected sign out error:', error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore imprevisto durante il logout.",
+        variant: "destructive"
+      });
+    }
   };
 
   const toggleMobileMenu = () => {

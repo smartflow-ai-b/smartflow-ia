@@ -123,13 +123,28 @@ export const useAuth = () => {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
+    console.log('Starting signOut process...');
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Supabase signOut error:', error);
+        return { error };
+      }
+      
+      console.log('Supabase signOut successful, clearing local state...');
+      
+      // Force clear the local state immediately
       setUser(null);
       setSession(null);
       setIsAdmin(false);
+      
+      console.log('Local state cleared successfully');
+      return { error: null };
+    } catch (error) {
+      console.error('Unexpected error during signOut:', error);
+      return { error: error as Error };
     }
-    return { error };
   };
 
   return {
