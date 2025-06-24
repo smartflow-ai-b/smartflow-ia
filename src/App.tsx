@@ -8,6 +8,12 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import CreateProject from "./pages/CreateProject";
 import AdminDashboard from "./pages/AdminDashboard";
+import Dashboard from "./pages/Dashboard";
+import MyProjects from "./pages/MyProjects";
+import Chat from "./pages/Chat";
+import Profile from "./pages/Profile";
+import Services from "./pages/Services";
+import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +29,17 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/create-project" element={<CreateProject />} />
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/my-projects" element={<MyProjects />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/services" element={<Services />} />
+          <Route path="/contact" element={<Contact />} />
+          {/* Services sub-pages */}
+          <Route path="/services/websites" element={<Services />} />
+          <Route path="/services/apps" element={<Services />} />
+          <Route path="/services/ecommerce" element={<Services />} />
+          <Route path="/services/ai-consulting" element={<Services />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
