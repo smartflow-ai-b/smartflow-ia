@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,34 +33,42 @@ const AdminDashboard = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log('AdminDashboard - Auth state:', { user: user?.email, isAdmin, authLoading });
+    console.log('AdminDashboard useEffect - Auth state:', { 
+      user: user?.email, 
+      isAdmin, 
+      authLoading 
+    });
     
-    if (!authLoading) {
-      if (!user) {
-        console.log('No user, redirecting to auth');
-        navigate('/auth');
-        return;
-      }
-      
-      if (!isAdmin) {
-        console.log('User is not admin, redirecting to home');
-        navigate('/');
-        return;
-      }
-      
-      // User is admin, fetch projects
-      fetchProjects();
+    // Wait for auth to finish loading
+    if (authLoading) {
+      console.log('Auth still loading, waiting...');
+      return;
     }
+    
+    // Check if user is logged in
+    if (!user) {
+      console.log('No user found, redirecting to auth');
+      navigate('/auth');
+      return;
+    }
+    
+    // Check if user is admin
+    if (!isAdmin) {
+      console.log('User is not admin, redirecting to home');
+      navigate('/');
+      return;
+    }
+    
+    // User is authenticated and admin, fetch projects
+    console.log('User is admin, fetching projects');
+    fetchProjects();
   }, [user, isAdmin, authLoading, navigate]);
-
-  useEffect(() => {
-    if (user && isAdmin) {
-      fetchProjects();
-    }
-  }, [user, isAdmin]);
 
   const fetchProjects = async () => {
     try {
+      setLoading(true);
+      console.log('Fetching projects...');
+      
       // First get all projects
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
@@ -75,6 +84,8 @@ const AdminDashboard = () => {
         });
         return;
       }
+
+      console.log('Projects fetched:', projectsData?.length || 0);
 
       // Then get user profiles for each project
       const projectsWithProfiles = await Promise.all(
@@ -154,6 +165,7 @@ const AdminDashboard = () => {
     }
   };
 
+  // Show loading while auth is loading
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -165,8 +177,9 @@ const AdminDashboard = () => {
     );
   }
 
+  // Don't render anything if user is not authenticated or not admin (useEffect will handle redirect)
   if (!user || !isAdmin) {
-    return null; // Component will redirect in useEffect
+    return null;
   }
 
   return (
