@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User, Crown, Menu, X } from 'lucide-react';
+import { LogOut, User, Crown, Menu, X, Settings } from 'lucide-react';
 
 const Header = () => {
   const { user, isAdmin, signOut } = useAuth();
@@ -53,6 +53,30 @@ const Header = () => {
                   <User className="w-4 h-4" />
                   <span className="hidden lg:inline">Ciao!</span>
                 </div>
+                
+                {/* Personal Area Buttons - Desktop */}
+                <Button
+                  onClick={() => navigate('/dashboard')}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-600 hover:text-electric-blue-600 p-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span className="hidden xl:inline ml-2">Area Cliente</span>
+                </Button>
+                
+                {isAdmin && (
+                  <Button
+                    onClick={() => navigate('/admin')}
+                    variant="ghost"
+                    size="sm"
+                    className="text-gray-600 hover:text-smart-purple-600 p-2"
+                  >
+                    <Crown className="w-4 h-4" />
+                    <span className="hidden xl:inline ml-2">Admin</span>
+                  </Button>
+                )}
+                
                 <Button
                   onClick={handleSignOut}
                   variant="ghost"
@@ -82,8 +106,8 @@ const Header = () => {
             </Button>
           </div>
 
-          {/* Mobile Menu Button */}
-          <div className="flex items-center space-x-2 md:hidden">
+          {/* Mobile Menu Button - Only on mobile */}
+          <div className="flex items-center space-x-3 md:hidden">
             {user && (
               <Button
                 onClick={handleSignOut}
@@ -105,7 +129,7 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu - Only visible on mobile */}
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 bg-white/95 backdrop-blur-sm">
             <div className="px-2 pt-4 pb-6 space-y-4">
@@ -134,12 +158,41 @@ const Header = () => {
                 </a>
               </nav>
 
-              {/* Mobile User Section */}
+              {/* Mobile User Section with Personal Areas */}
               {user && (
                 <div className="px-3 py-2 border-t border-gray-200">
-                  <div className="flex items-center space-x-2 text-sm text-gray-600 mb-3">
+                  <div className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
                     <User className="w-4 h-4" />
                     <span>Ciao!</span>
+                  </div>
+                  
+                  {/* Personal Area Buttons - Mobile */}
+                  <div className="space-y-2 mb-4">
+                    <Button 
+                      onClick={() => {
+                        navigate('/dashboard');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      variant="outline"
+                      className="w-full justify-start border-electric-blue-500 text-electric-blue-600 hover:bg-electric-blue-50"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Area Cliente
+                    </Button>
+                    
+                    {isAdmin && (
+                      <Button 
+                        onClick={() => {
+                          navigate('/admin');
+                          setIsMobileMenuOpen(false);
+                        }}
+                        variant="outline"
+                        className="w-full justify-start border-smart-purple-500 text-smart-purple-600 hover:bg-smart-purple-50"
+                      >
+                        <Crown className="w-4 h-4 mr-2" />
+                        Area Amministratore
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
