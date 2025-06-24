@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,23 +33,8 @@ const AdminDashboard = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log('AdminDashboard - Auth state:', { user: user?.email, isAdmin, authLoading });
-    
-    if (!authLoading) {
-      if (!user) {
-        console.log('No user, redirecting to auth');
-        navigate('/auth');
-        return;
-      }
-      
-      if (!isAdmin) {
-        console.log('User is not admin, redirecting to home');
-        navigate('/');
-        return;
-      }
-      
-      // User is admin, fetch projects
-      fetchProjects();
+    if (!authLoading && (!user || !isAdmin)) {
+      navigate('/');
     }
   }, [user, isAdmin, authLoading, navigate]);
 
@@ -154,19 +140,12 @@ const AdminDashboard = () => {
     }
   };
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-electric-blue-500 mx-auto mb-4"></div>
-          <p>Caricamento...</p>
-        </div>
-      </div>
-    );
+  if (authLoading || loading) {
+    return <div className="min-h-screen flex items-center justify-center">Caricamento...</div>;
   }
 
-  if (!user || !isAdmin) {
-    return null; // Component will redirect in useEffect
+  if (!isAdmin) {
+    return null;
   }
 
   return (
@@ -294,11 +273,8 @@ const AdminDashboard = () => {
                   </CardContent>
                 </Card>
               ))}
-              {projects.length === 0 && !loading && (
+              {projects.length === 0 && (
                 <p className="text-center text-gray-500 py-8">Nessun progetto trovato</p>
-              )}
-              {loading && (
-                <p className="text-center text-gray-500 py-8">Caricamento progetti...</p>
               )}
             </div>
           </CardContent>
