@@ -33,19 +33,24 @@ export const useAuth = () => {
     }
   };
 
-  const handleAuthStateChange = async (event: string, session: Session | null) => {
-    console.log('Auth state changed:', event, session?.user?.email);
+  // Separate function to handle session processing
+  const processSession = async (session: Session | null, source: string) => {
+    console.log(`Processing session from ${source}:`, session?.user?.email || 'No session');
     
     setSession(session);
     setUser(session?.user ?? null);
     
     if (session?.user) {
-      // Check admin role when session changes
-      const adminStatus = await checkAdminRole(session.user.id);
-      console.log('Setting admin status:', adminStatus, 'for user:', session.user.email);
-      setIsAdmin(adminStatus);
+      try {
+        const adminStatus = await checkAdminRole(session.user.id);
+        console.log(`Setting admin status from ${source}:`, adminStatus, 'for user:', session.user.email);
+        setIsAdmin(adminStatus);
+      } catch (error) {
+        console.error(`Error processing admin status from ${source}:`, error);
+        setIsAdmin(false);
+      }
     } else {
-      console.log('No session, clearing admin status');
+      console.log(`No session from ${source}, clearing admin status`);
       setIsAdmin(false);
     }
     
@@ -53,44 +58,25 @@ export const useAuth = () => {
   };
 
   useEffect(() => {
-    console.log('Setting up auth listener...');
+    console.log('Setting up auth system...');
     let mounted = true;
     
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
-
-    // Get initial session and process it
+    // Get initial session first
     const initializeAuth = async () => {
       try {
         console.log('Getting initial session...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Error getting session:', error);
+          console.error('Error getting initial session:', error);
           if (mounted) {
             setLoading(false);
           }
           return;
         }
         
-        console.log('Initial session found:', session?.user?.email || 'No session');
-        
         if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          
-          if (session?.user) {
-            console.log('Processing initial session for user:', session.user.email);
-            const adminStatus = await checkAdminRole(session.user.id);
-            console.log('Initial admin status:', adminStatus);
-            if (mounted) {
-              setIsAdmin(adminStatus);
-            }
-          } else {
-            setIsAdmin(false);
-          }
-          
-          setLoading(false);
+          await processSession(session, 'initial');
         }
         
       } catch (error) {
@@ -100,6 +86,17 @@ export const useAuth = () => {
         }
       }
     };
+
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
+        
+        if (mounted) {
+          await processSession(session, `auth_change_${event}`);
+        }
+      }
+    );
 
     // Initialize auth state
     initializeAuth();
@@ -129,10 +126,18 @@ export const useAuth = () => {
   };
 
   const signIn = async (email: string, password: string) => {
+    console.log('Starting signIn process...');
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
+    
+    if (error) {
+      console.error('SignIn error:', error);
+    } else {
+      console.log('SignIn successful');
+    }
+    
     return { error };
   };
 
@@ -148,7 +153,7 @@ export const useAuth = () => {
       
       console.log('Supabase signOut successful');
       
-      // Clear local state immediately to provide immediate feedback
+      // Clear local state immediately
       setSession(null);
       setUser(null);
       setIsAdmin(false);
