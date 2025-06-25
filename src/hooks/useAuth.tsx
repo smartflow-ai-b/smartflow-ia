@@ -36,36 +36,7 @@ export const useAuth = () => {
   useEffect(() => {
     console.log('Setting up auth listener...');
     
-    // Get initial session
-    const getInitialSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('Error getting session:', error);
-          setLoading(false);
-          return;
-        }
-        
-        console.log('Initial session:', session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          const adminStatus = await checkAdminRole(session.user.id);
-          console.log('Initial admin status for user:', session.user.email, adminStatus);
-          setIsAdmin(adminStatus);
-        } else {
-          setIsAdmin(false);
-        }
-        
-        setLoading(false);
-      } catch (error) {
-        console.error('Error in getInitialSession:', error);
-        setLoading(false);
-      }
-    };
-
-    // Set up auth state listener
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
@@ -82,11 +53,37 @@ export const useAuth = () => {
           setIsAdmin(false);
         }
         
-        if (event === 'INITIAL_SESSION') {
-          setLoading(false);
-        }
+        // Set loading to false after processing the auth state
+        setLoading(false);
       }
     );
+
+    // THEN get initial session
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting session:', error);
+          setLoading(false);
+          return;
+        }
+        
+        console.log('Initial session:', session?.user?.email || 'No session');
+        
+        // Only set state if we don't have a session yet (to avoid duplicate processing)
+        if (!session) {
+          setSession(null);
+          setUser(null);
+          setIsAdmin(false);
+          setLoading(false);
+        }
+        // If we have a session, the onAuthStateChange will handle it
+        
+      } catch (error) {
+        console.error('Error in getInitialSession:', error);
+        setLoading(false);
+      }
+    };
 
     // Get initial session
     getInitialSession();
@@ -132,14 +129,11 @@ export const useAuth = () => {
         return { error };
       }
       
-      console.log('Supabase signOut successful, clearing local state...');
+      console.log('Supabase signOut successful');
       
-      // Force clear the local state immediately
-      setUser(null);
-      setSession(null);
-      setIsAdmin(false);
+      // Don't manually clear state here - let the onAuthStateChange handle it
+      // This prevents race conditions and ensures consistent state management
       
-      console.log('Local state cleared successfully');
       return { error: null };
     } catch (error) {
       console.error('Unexpected error during signOut:', error);
