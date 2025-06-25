@@ -33,24 +33,24 @@ export const useAuth = () => {
     }
   };
 
-  // Separate function to handle session processing
-  const processSession = async (session: Session | null, source: string) => {
-    console.log(`Processing session from ${source}:`, session?.user?.email || 'No session');
+  // Funzione per aggiornare tutti gli stati dell'utente
+  const updateUserState = async (currentSession: Session | null) => {
+    console.log('Updating user state with session:', currentSession?.user?.email || 'No session');
     
-    setSession(session);
-    setUser(session?.user ?? null);
+    setSession(currentSession);
+    setUser(currentSession?.user ?? null);
     
-    if (session?.user) {
+    if (currentSession?.user) {
       try {
-        const adminStatus = await checkAdminRole(session.user.id);
-        console.log(`Setting admin status from ${source}:`, adminStatus, 'for user:', session.user.email);
+        const adminStatus = await checkAdminRole(currentSession.user.id);
+        console.log('Setting admin status:', adminStatus, 'for user:', currentSession.user.email);
         setIsAdmin(adminStatus);
       } catch (error) {
-        console.error(`Error processing admin status from ${source}:`, error);
+        console.error('Error checking admin status:', error);
         setIsAdmin(false);
       }
     } else {
-      console.log(`No session from ${source}, clearing admin status`);
+      console.log('No session, clearing all states');
       setIsAdmin(false);
     }
     
@@ -58,25 +58,30 @@ export const useAuth = () => {
   };
 
   useEffect(() => {
-    console.log('Setting up auth system...');
-    let mounted = true;
+    console.log('Initializing auth system...');
     
-    // Get initial session first
+    let mounted = true;
+    let authInitialized = false;
+
+    // Funzione per inizializzare l'autenticazione
     const initializeAuth = async () => {
       try {
-        console.log('Getting initial session...');
+        console.log('Getting current session...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Error getting initial session:', error);
+          console.error('Error getting session:', error);
           if (mounted) {
             setLoading(false);
           }
           return;
         }
+
+        console.log('Session retrieved:', session?.user?.email || 'No session found');
         
-        if (mounted) {
-          await processSession(session, 'initial');
+        if (mounted && !authInitialized) {
+          authInitialized = true;
+          await updateUserState(session);
         }
         
       } catch (error) {
@@ -87,23 +92,31 @@ export const useAuth = () => {
       }
     };
 
-    // Set up auth state listener
+    // Listener per i cambiamenti di stato dell'autenticazione
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
+        console.log('Auth state change event:', event, 'Session:', session?.user?.email || 'No session');
         
         if (mounted) {
-          await processSession(session, `auth_change_${event}`);
+          // Per eventi che non sono INITIAL_SESSION, aggiorna sempre
+          if (event !== 'INITIAL_SESSION') {
+            await updateUserState(session);
+          }
+          // Per INITIAL_SESSION, aggiorna solo se non è già stato inizializzato
+          else if (!authInitialized) {
+            authInitialized = true;
+            await updateUserState(session);
+          }
         }
       }
     );
 
-    // Initialize auth state
+    // Inizializza immediatamente
     initializeAuth();
 
     return () => {
-      mounted = false;
       console.log('Cleaning up auth subscription');
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -135,7 +148,7 @@ export const useAuth = () => {
     if (error) {
       console.error('SignIn error:', error);
     } else {
-      console.log('SignIn successful');
+      console.log('SignIn successful, auth state will update automatically');
     }
     
     return { error };
@@ -153,7 +166,7 @@ export const useAuth = () => {
       
       console.log('Supabase signOut successful');
       
-      // Clear local state immediately
+      // Pulisci immediatamente lo stato locale
       setSession(null);
       setUser(null);
       setIsAdmin(false);

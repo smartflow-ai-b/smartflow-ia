@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,7 +7,7 @@ import { LogOut, User, Crown, Menu, X, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const Header = () => {
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -49,6 +50,29 @@ const Header = () => {
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
+
+  // Mostra un indicatore di caricamento se l'auth è ancora in loading
+  if (loading) {
+    return (
+      <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center text-xl sm:text-2xl font-bold bg-gradient-to-r from-electric-blue-600 to-smart-purple-600 bg-clip-text text-transparent">
+              SmartFlow
+            </div>
+            <div className="hidden lg:flex space-x-6 xl:space-x-8">
+              <a href="#features" className="text-gray-700 hover:text-electric-blue-600 transition-colors text-sm xl:text-base">Features</a>
+              <a href="#process" className="text-gray-700 hover:text-electric-blue-600 transition-colors text-sm xl:text-base">Processo</a>
+              <a href="#contact" className="text-gray-700 hover:text-electric-blue-600 transition-colors text-sm xl:text-base">Contatti</a>
+            </div>
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-electric-blue-500"></div>
+            </div>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
