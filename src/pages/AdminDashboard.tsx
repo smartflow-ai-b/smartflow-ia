@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Users, FolderOpen, MessageSquare, Crown } from 'lucide-react';
+import { ArrowLeft, Users, FolderOpen, MessageSquare, Crown, Settings, UserCheck } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -28,6 +28,7 @@ interface Project {
 const AdminDashboard = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -185,6 +186,7 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-electric-blue-50 to-smart-purple-50 p-4">
       <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <Card className="glass-card mb-6">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -206,116 +208,225 @@ const AdminDashboard = () => {
           </CardHeader>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="glass-card">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <FolderOpen className="w-8 h-8 text-electric-blue-500" />
-                <div>
-                  <p className="text-2xl font-bold">{projects.length}</p>
-                  <p className="text-gray-600">Progetti Totali</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <Users className="w-8 h-8 text-smart-purple-500" />
-                <div>
-                  <p className="text-2xl font-bold">{projects.filter(p => p.status === 'pending').length}</p>
-                  <p className="text-gray-600">In Attesa</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <MessageSquare className="w-8 h-8 text-green-500" />
-                <div>
-                  <p className="text-2xl font-bold">{projects.filter(p => p.status === 'in_progress').length}</p>
-                  <p className="text-gray-600">In Corso</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle>Progetti</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {projects.map((project) => (
-                <Card key={project.id} className="border">
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg mb-2">{project.title}</h3>
-                        <p className="text-gray-600 mb-2">{project.description}</p>
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          <Badge variant="outline">{project.project_type}</Badge>
-                          {project.budget_range && <Badge variant="outline">{project.budget_range}</Badge>}
-                          {project.timeline && <Badge variant="outline">{project.timeline}</Badge>}
-                        </div>
-                        <p className="text-sm text-gray-500">
-                          Cliente: {project.user_profile?.first_name || 'N/A'} {project.user_profile?.last_name || ''} ({project.user_profile?.email || 'Email non disponibile'})
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Creato: {new Date(project.created_at).toLocaleDateString('it-IT')}
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <Badge className={getStatusColor(project.status)}>
-                          {getStatusText(project.status)}
-                        </Badge>
-                        <div className="flex gap-2">
-                          {project.status === 'pending' && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => updateProjectStatus(project.id, 'in_progress')}
-                                className="bg-blue-500 hover:bg-blue-600"
-                              >
-                                Accetta
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => updateProjectStatus(project.id, 'rejected')}
-                              >
-                                Rifiuta
-                              </Button>
-                            </>
-                          )}
-                          {project.status === 'in_progress' && (
-                            <Button
-                              size="sm"
-                              onClick={() => updateProjectStatus(project.id, 'completed')}
-                              className="bg-green-500 hover:bg-green-600"
-                            >
-                              Completa
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {projects.length === 0 && !loading && (
-                <p className="text-center text-gray-500 py-8">Nessun progetto trovato</p>
-              )}
-              {loading && (
-                <p className="text-center text-gray-500 py-8">Caricamento progetti...</p>
-              )}
+        {/* Admin Tools Navigation */}
+        <Card className="glass-card mb-6">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Button
+                onClick={() => setActiveTab('overview')}
+                variant={activeTab === 'overview' ? 'default' : 'outline'}
+                className="flex items-center gap-2"
+              >
+                <FolderOpen className="w-4 h-4" />
+                Panoramica
+              </Button>
+              <Button
+                onClick={() => setActiveTab('projects')}
+                variant={activeTab === 'projects' ? 'default' : 'outline'}
+                className="flex items-center gap-2"
+              >
+                <Settings className="w-4 h-4" />
+                Gestione Progetti
+              </Button>
+              <Button
+                onClick={() => navigate('/chat')}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Chat Supporto
+              </Button>
+              <Button
+                onClick={() => setActiveTab('users')}
+                variant={activeTab === 'users' ? 'default' : 'outline'}
+                className="flex items-center gap-2"
+              >
+                <UserCheck className="w-4 h-4" />
+                Utenti
+              </Button>
             </div>
           </CardContent>
         </Card>
+
+        {/* Overview Stats */}
+        {activeTab === 'overview' && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <Card className="glass-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <FolderOpen className="w-8 h-8 text-electric-blue-500" />
+                    <div>
+                      <p className="text-2xl font-bold">{projects.length}</p>
+                      <p className="text-gray-600">Progetti Totali</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="glass-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <Users className="w-8 h-8 text-smart-purple-500" />
+                    <div>
+                      <p className="text-2xl font-bold">{projects.filter(p => p.status === 'pending').length}</p>
+                      <p className="text-gray-600">In Attesa</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="glass-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <MessageSquare className="w-8 h-8 text-green-500" />
+                    <div>
+                      <p className="text-2xl font-bold">{projects.filter(p => p.status === 'in_progress').length}</p>
+                      <p className="text-gray-600">In Corso</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recent Projects Overview */}
+            <Card className="glass-card">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle>Progetti Recenti</CardTitle>
+                  <Button
+                    onClick={() => setActiveTab('projects')}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Vedi Tutti
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {projects.slice(0, 5).map((project) => (
+                    <Card key={project.id} className="border">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h4 className="font-semibold">{project.title}</h4>
+                            <p className="text-sm text-gray-600">
+                              {project.user_profile?.first_name} {project.user_profile?.last_name}
+                            </p>
+                          </div>
+                          <Badge className={getStatusColor(project.status)}>
+                            {getStatusText(project.status)}
+                          </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {/* Projects Management */}
+        {activeTab === 'projects' && (
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle>Gestione Progetti</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {projects.map((project) => (
+                  <Card key={project.id} className="border">
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg mb-2">{project.title}</h3>
+                          <p className="text-gray-600 mb-2">{project.description}</p>
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            <Badge variant="outline">{project.project_type}</Badge>
+                            {project.budget_range && <Badge variant="outline">{project.budget_range}</Badge>}
+                            {project.timeline && <Badge variant="outline">{project.timeline}</Badge>}
+                          </div>
+                          <p className="text-sm text-gray-500">
+                            Cliente: {project.user_profile?.first_name || 'N/A'} {project.user_profile?.last_name || ''} ({project.user_profile?.email || 'Email non disponibile'})
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Creato: {new Date(project.created_at).toLocaleDateString('it-IT')}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge className={getStatusColor(project.status)}>
+                            {getStatusText(project.status)}
+                          </Badge>
+                          <div className="flex gap-2">
+                            {project.status === 'pending' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={() => updateProjectStatus(project.id, 'in_progress')}
+                                  className="bg-blue-500 hover:bg-blue-600"
+                                >
+                                  Accetta
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => updateProjectStatus(project.id, 'rejected')}
+                                >
+                                  Rifiuta
+                                </Button>
+                              </>
+                            )}
+                            {project.status === 'in_progress' && (
+                              <Button
+                                size="sm"
+                                onClick={() => updateProjectStatus(project.id, 'completed')}
+                                className="bg-green-500 hover:bg-green-600"
+                              >
+                                Completa
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                {projects.length === 0 && !loading && (
+                  <p className="text-center text-gray-500 py-8">Nessun progetto trovato</p>
+                )}
+                {loading && (
+                  <p className="text-center text-gray-500 py-8">Caricamento progetti...</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Users Management */}
+        {activeTab === 'users' && (
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle>Gestione Utenti</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <UserCheck className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Gestione Utenti</h3>
+                <p className="text-gray-600 mb-4">
+                  Funzionalità di gestione utenti in arrivo
+                </p>
+                <Button
+                  onClick={() => navigate('/chat')}
+                  variant="outline"
+                >
+                  Vai al Supporto
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
