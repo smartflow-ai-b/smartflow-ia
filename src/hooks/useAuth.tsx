@@ -2,16 +2,19 @@
 import { useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuthCache } from './useAuthCache';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  
+  const { saveToCache, loadFromCache, clearCache } = useAuthCache();
 
-  const checkAdminRole = async (userId: string) => {
+  const checkAdminRole = async (userId: string, retryCount = 0): Promise<boolean> => {
     try {
-      console.log('Checking admin role for user:', userId);
+      console.log('Checking admin role for user:', userId, 'attempt:', retryCount + 1);
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
@@ -21,6 +24,14 @@ export const useAuth = () => {
       
       if (error) {
         console.error('Error checking admin role:', error);
+        // Se fallisce e abbiamo dati cached, usa quelli
+        if (retryCount === 0) {
+          const cached = loadFromCache();
+          if (cached && cached.user?.id === userId) {
+            console.log('Using cached admin status:', cached.isAdmin);
+            return cached.isAdmin;
+          }
+        }
         return false;
       }
       
@@ -29,29 +40,55 @@ export const useAuth = () => {
       return adminStatus;
     } catch (error) {
       console.error('Error in checkAdminRole:', error);
+      
+      // Retry una volta, poi usa cached data se disponibile
+      if (retryCount < 1) {
+        console.log('Retrying admin role check...');
+        return checkAdminRole(userId, retryCount + 1);
+      }
+      
+      const cached = loadFromCache();
+      if (cached && cached.user?.id === userId) {
+        console.log('Using cached admin status after error:', cached.isAdmin);
+        return cached.isAdmin;
+      }
+      
       return false;
     }
   };
 
-  // Funzione per aggiornare tutti gli stati dell'utente
   const updateUserState = async (currentSession: Session | null) => {
     console.log('Updating user state with session:', currentSession?.user?.email || 'No session');
     
     setSession(currentSession);
-    setUser(currentSession?.user ?? null);
+    const currentUser = currentSession?.user ?? null;
+    setUser(currentUser);
     
-    if (currentSession?.user) {
+    if (currentUser) {
       try {
-        const adminStatus = await checkAdminRole(currentSession.user.id);
-        console.log('Setting admin status:', adminStatus, 'for user:', currentSession.user.email);
+        const adminStatus = await checkAdminRole(currentUser.id);
         setIsAdmin(adminStatus);
+        
+        // Salva nel cache
+        saveToCache(currentUser, adminStatus);
+        
+        console.log('User state updated:', { 
+          email: currentUser.email, 
+          isAdmin: adminStatus 
+        });
       } catch (error) {
-        console.error('Error checking admin status:', error);
-        setIsAdmin(false);
+        console.error('Error updating user state:', error);
+        // In caso di errore, usa i dati cached
+        const cached = loadFromCache();
+        if (cached && cached.user?.id === currentUser.id) {
+          setIsAdmin(cached.isAdmin);
+          console.log('Used cached admin status due to error');
+        }
       }
     } else {
       console.log('No session, clearing all states');
       setIsAdmin(false);
+      clearCache();
     }
     
     setLoading(false);
@@ -60,63 +97,64 @@ export const useAuth = () => {
   useEffect(() => {
     console.log('Initializing auth system...');
     
-    let mounted = true;
-    let authInitialized = false;
+    // Prima carica i dati cached per avere uno stato immediato
+    const cached = loadFromCache();
+    if (cached && cached.user) {
+      console.log('Loading cached auth data immediately');
+      setUser(cached.user);
+      setIsAdmin(cached.isAdmin);
+      setLoading(false); // Imposta loading a false immediatamente per evitare loading infinito
+    }
 
-    // Funzione per inizializzare l'autenticazione
-    const initializeAuth = async () => {
+    let isMounted = true;
+
+    // Imposta il listener per i cambiamenti di stato
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state change event:', event, 'Session:', session?.user?.email || 'No session');
+        
+        if (isMounted) {
+          await updateUserState(session);
+        }
+      }
+    );
+
+    // Verifica la sessione corrente
+    const initSession = async () => {
       try {
-        console.log('Getting current session...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting session:', error);
-          if (mounted) {
+          if (isMounted) {
             setLoading(false);
           }
           return;
         }
 
-        console.log('Session retrieved:', session?.user?.email || 'No session found');
+        console.log('Initial session retrieved:', session?.user?.email || 'No session found');
         
-        if (mounted && !authInitialized) {
-          authInitialized = true;
-          await updateUserState(session);
+        if (isMounted) {
+          // Solo aggiorna se non abbiamo già dati cached o se la sessione è diversa
+          if (!cached || cached.user?.id !== session?.user?.id) {
+            await updateUserState(session);
+          }
         }
         
       } catch (error) {
-        console.error('Error in initializeAuth:', error);
-        if (mounted) {
+        console.error('Error in initSession:', error);
+        if (isMounted) {
           setLoading(false);
         }
       }
     };
 
-    // Listener per i cambiamenti di stato dell'autenticazione
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change event:', event, 'Session:', session?.user?.email || 'No session');
-        
-        if (mounted) {
-          // Per eventi che non sono INITIAL_SESSION, aggiorna sempre
-          if (event !== 'INITIAL_SESSION') {
-            await updateUserState(session);
-          }
-          // Per INITIAL_SESSION, aggiorna solo se non è già stato inizializzato
-          else if (!authInitialized) {
-            authInitialized = true;
-            await updateUserState(session);
-          }
-        }
-      }
-    );
-
-    // Inizializza immediatamente
-    initializeAuth();
+    // Avvia l'inizializzazione
+    initSession();
 
     return () => {
       console.log('Cleaning up auth subscription');
-      mounted = false;
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -166,10 +204,11 @@ export const useAuth = () => {
       
       console.log('Supabase signOut successful');
       
-      // Pulisci immediatamente lo stato locale
+      // Pulisci immediatamente lo stato locale e la cache
       setSession(null);
       setUser(null);
       setIsAdmin(false);
+      clearCache();
       
       return { error: null };
     } catch (error) {
