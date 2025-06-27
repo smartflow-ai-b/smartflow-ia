@@ -1,20 +1,32 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { MessageSquare, X, Send } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, User } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useChatSessions } from '@/hooks/useChatSessions';
+import { useChatMessages } from '@/hooks/useChatMessages';
+import { useNavigate } from 'react-router-dom';
 
 const AIAssistant = () => {
+  const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      text: "Ciao! Sono l'assistente AI di SmartFlow 👋 Come posso aiutarti oggi?",
-      isBot: true,
-      timestamp: new Date()
-    }
-  ]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const {
+    currentSession,
+    createSession,
+    isLoadingSession,
+    isCreatingSession
+  } = useChatSessions();
+
+  const {
+    messages,
+    sendMessage,
+    isSendingMessage
+  } = useChatMessages(currentSession?.id || null);
 
   const quickQuestions = [
     "Quanto costa un sito web?",
@@ -23,34 +35,40 @@ const AIAssistant = () => {
     "Posso vedere esempi?"
   ];
 
+  // Create session if user doesn't have one and opens chat
+  useEffect(() => {
+    if (isOpen && user && !isAdmin && !currentSession && !isLoadingSession && !isCreatingSession) {
+      console.log('Creating new chat session for user via assistant');
+      createSession();
+    }
+  }, [isOpen, user, isAdmin, currentSession, isLoadingSession, isCreatingSession, createSession]);
+
+  // Auto scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   const handleSendMessage = () => {
-    if (!message.trim()) return;
+    if (!message.trim() || isSendingMessage) return;
 
-    const newMessage = {
-      id: messages.length + 1,
-      text: message,
-      isBot: false,
-      timestamp: new Date()
-    };
-
-    setMessages([...messages, newMessage]);
+    console.log('Sending message via assistant:', message);
+    sendMessage({ message: message.trim() });
     setMessage('');
-
-    // Simulate AI response
-    setTimeout(() => {
-      const botResponse = {
-        id: messages.length + 2,
-        text: "Grazie per la tua domanda! Un nostro consulente ti risponderà a breve. Nel frattempo, puoi iniziare a creare il tuo progetto cliccando su 'Crea Progetto' 🚀",
-        isBot: true,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, botResponse]);
-    }, 1000);
   };
 
   const handleQuickQuestion = (question: string) => {
     setMessage(question);
   };
+
+  const handleOpenFullChat = () => {
+    setIsOpen(false);
+    navigate('/chat');
+  };
+
+  // Don't show for admin users
+  if (isAdmin) {
+    return null;
+  }
 
   if (!isOpen) {
     return (
@@ -79,14 +97,24 @@ const AIAssistant = () => {
                 <p className="text-sm text-white/80">Online ora</p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsOpen(false)}
-              className="text-white hover:bg-white/20 h-8 w-8 p-0"
-            >
-              <X className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleOpenFullChat}
+                className="text-white hover:bg-white/20 h-8 px-2 text-xs"
+              >
+                Espandi
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsOpen(false)}
+                className="text-white hover:bg-white/20 h-8 w-8 p-0"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </CardHeader>
 
@@ -94,20 +122,38 @@ const AIAssistant = () => {
           {/* Messages */}
           <div className="h-80 overflow-y-auto p-4 space-y-4">
             {messages.map((msg) => (
-              <div key={msg.id} className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'}`}>
+              <div 
+                key={msg.id} 
+                className={`flex ${msg.sender_type === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
                 <div className={`max-w-[80%] p-3 rounded-lg ${
-                  msg.isBot 
-                    ? 'bg-gray-100 text-gray-800' 
-                    : 'bg-gradient-to-r from-electric-blue-500 to-smart-purple-500 text-white'
+                  msg.sender_type === 'user'
+                    ? 'bg-gradient-to-r from-electric-blue-500 to-smart-purple-500 text-white'
+                    : msg.sender_type === 'system'
+                    ? 'bg-gray-100 text-gray-800'
+                    : 'bg-green-100 text-green-800'
                 }`}>
-                  <p className="text-sm">{msg.text}</p>
+                  {(msg.sender_type === 'system' || msg.sender_type === 'admin') && (
+                    <div className="flex items-center gap-2 mb-1">
+                      {msg.sender_type === 'system' ? (
+                        <Bot className="w-3 h-3" />
+                      ) : (
+                        <User className="w-3 h-3" />
+                      )}
+                      <span className="text-xs font-medium">
+                        {msg.sender_type === 'system' ? 'Assistant' : 'Supporto'}
+                      </span>
+                    </div>
+                  )}
+                  <p className="text-sm">{msg.message}</p>
                 </div>
               </div>
             ))}
+            <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick questions */}
-          {messages.length === 1 && (
+          {/* Quick questions - show only if no messages or just the welcome message */}
+          {messages.length <= 1 && (
             <div className="p-4 border-t bg-gray-50">
               <p className="text-sm text-gray-600 mb-2">Domande frequenti:</p>
               <div className="flex flex-wrap gap-2">
@@ -136,10 +182,12 @@ const AIAssistant = () => {
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Scrivi il tuo messaggio..."
                 className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-electric-blue-500 text-sm"
+                disabled={isSendingMessage}
               />
               <Button
                 onClick={handleSendMessage}
                 size="sm"
+                disabled={isSendingMessage || !message.trim()}
                 className="bg-gradient-to-r from-electric-blue-500 to-smart-purple-500 hover:from-electric-blue-600 hover:to-smart-purple-600"
               >
                 <Send className="w-4 h-4" />
