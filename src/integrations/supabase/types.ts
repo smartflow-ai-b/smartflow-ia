@@ -100,30 +100,83 @@ export type Database = {
       }
       profiles: {
         Row: {
+          blocked_at: string | null
+          blocked_by: string | null
+          blocked_reason: string | null
           created_at: string
           email: string
           first_name: string | null
           id: string
+          is_blocked: boolean
           last_name: string | null
           updated_at: string
         }
         Insert: {
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
           created_at?: string
           email: string
           first_name?: string | null
           id: string
+          is_blocked?: boolean
           last_name?: string | null
           updated_at?: string
         }
         Update: {
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
           created_at?: string
           email?: string
           first_name?: string | null
           id?: string
+          is_blocked?: boolean
           last_name?: string | null
           updated_at?: string
         }
         Relationships: []
+      }
+      project_files: {
+        Row: {
+          file_name: string
+          file_size: number | null
+          file_type: string
+          file_url: string
+          id: string
+          project_id: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          file_name: string
+          file_size?: number | null
+          file_type: string
+          file_url: string
+          id?: string
+          project_id: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          file_name?: string
+          file_size?: number | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          project_id?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_messages: {
         Row: {
@@ -160,12 +213,56 @@ export type Database = {
           },
         ]
       }
+      project_updates: {
+        Row: {
+          admin_id: string | null
+          created_at: string
+          id: string
+          message: string | null
+          metadata: Json | null
+          project_id: string
+          title: string
+          update_type: string
+        }
+        Insert: {
+          admin_id?: string | null
+          created_at?: string
+          id?: string
+          message?: string | null
+          metadata?: Json | null
+          project_id: string
+          title: string
+          update_type?: string
+        }
+        Update: {
+          admin_id?: string | null
+          created_at?: string
+          id?: string
+          message?: string | null
+          metadata?: Json | null
+          project_id?: string
+          title?: string
+          update_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_updates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           budget_range: string | null
+          completion_percentage: number | null
           created_at: string
           description: string | null
           id: string
+          live_url: string | null
+          preview_url: string | null
           project_type: string
           requirements: string | null
           status: string
@@ -176,9 +273,12 @@ export type Database = {
         }
         Insert: {
           budget_range?: string | null
+          completion_percentage?: number | null
           created_at?: string
           description?: string | null
           id?: string
+          live_url?: string | null
+          preview_url?: string | null
           project_type: string
           requirements?: string | null
           status?: string
@@ -189,14 +289,53 @@ export type Database = {
         }
         Update: {
           budget_range?: string | null
+          completion_percentage?: number | null
           created_at?: string
           description?: string | null
           id?: string
+          live_url?: string | null
+          preview_url?: string | null
           project_type?: string
           requirements?: string | null
           status?: string
           timeline?: string | null
           title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      system_notifications: {
+        Row: {
+          admin_id: string
+          created_at: string
+          id: string
+          message: string
+          read_at: string | null
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          id?: string
+          message: string
+          read_at?: string | null
+          title: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          read_at?: string | null
+          title?: string
+          type?: string
           updated_at?: string
           user_id?: string
         }

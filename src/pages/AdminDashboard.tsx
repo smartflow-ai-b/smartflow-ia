@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Users, FolderOpen, MessageSquare, Crown, Settings, UserCheck } from 'lucide-react';
 import AdminChatInterface from '@/components/AdminChatInterface';
+import UserManagementInterface from '@/components/UserManagementInterface';
 
 interface Project {
   id: string;
@@ -242,7 +243,7 @@ const AdminDashboard = () => {
                 className="flex items-center gap-2"
               >
                 <UserCheck className="w-4 h-4" />
-                Utenti
+                Gestione Utenti
               </Button>
             </div>
           </CardContent>
@@ -256,6 +257,18 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent>
               <AdminChatInterface />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Users Management */}
+        {activeTab === 'users' && (
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle>Gestione Utenti</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <UserManagementInterface />
             </CardContent>
           </Card>
         )}
@@ -411,30 +424,6 @@ const AdminDashboard = () => {
                 {loading && (
                   <p className="text-center text-gray-500 py-8">Caricamento progetti...</p>
                 )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Users Management */}
-        {activeTab === 'users' && (
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle>Gestione Utenti</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <UserCheck className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Gestione Utenti</h3>
-                <p className="text-gray-600 mb-4">
-                  Funzionalità di gestione utenti in arrivo
-                </p>
-                <Button
-                  onClick={() => navigate('/chat')}
-                  variant="outline"
-                >
-                  Vai al Supporto
-                </Button>
               </div>
             </CardContent>
           </Card>
