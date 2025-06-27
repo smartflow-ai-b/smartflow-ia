@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Users, FolderOpen, MessageSquare, Crown, Settings, UserCheck } from 'lucide-react';
+import AdminChatInterface from '@/components/AdminChatInterface';
 
 interface Project {
   id: string;
@@ -229,12 +229,12 @@ const AdminDashboard = () => {
                 Gestione Progetti
               </Button>
               <Button
-                onClick={() => navigate('/chat')}
-                variant="outline"
+                onClick={() => setActiveTab('chat')}
+                variant={activeTab === 'chat' ? 'default' : 'outline'}
                 className="flex items-center gap-2"
               >
                 <MessageSquare className="w-4 h-4" />
-                Chat Supporto
+                Gestione Chat
               </Button>
               <Button
                 onClick={() => setActiveTab('users')}
@@ -247,6 +247,18 @@ const AdminDashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Chat Management */}
+        {activeTab === 'chat' && (
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle>Gestione Chat</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AdminChatInterface />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Overview Stats */}
         {activeTab === 'overview' && (
