@@ -16,7 +16,7 @@ import {
   Shield, 
   ShieldOff, 
   Crown, 
-  CrownOff, 
+  UserMinus, 
   MessageSquare, 
   Search,
   AlertTriangle,
@@ -238,7 +238,7 @@ const UserManagementInterface = () => {
                           disabled={isUpdatingUser}
                         >
                           {isUserAdmin(user) ? (
-                            <CrownOff className="w-4 h-4" />
+                            <UserMinus className="w-4 h-4" />
                           ) : (
                             <Crown className="w-4 h-4" />
                           )}

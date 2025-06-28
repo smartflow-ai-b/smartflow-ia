@@ -30,7 +30,7 @@ export const useUserManagement = () => {
         .from('profiles')
         .select(`
           *,
-          user_roles!inner(role),
+          user_roles(role),
           projects(id, title, status)
         `)
         .order('created_at', { ascending: false });
