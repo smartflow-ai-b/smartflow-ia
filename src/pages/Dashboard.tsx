@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -125,123 +126,127 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-electric-blue-50 to-smart-purple-50">
       <Header />
-      <div className="p-4">
-        <div className="max-w-6xl mx-auto">
+      <div className="p-3 sm:p-4 lg:p-6">
+        <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
           {/* Header */}
-          <Card className="glass-card mb-6">
-            <CardHeader className="space-y-4">
-              <div className="text-center">
-                <CardTitle className="text-2xl bg-gradient-to-r from-electric-blue-600 to-smart-purple-600 bg-clip-text text-transparent">
+          <Card className="glass-card">
+            <CardHeader className="p-4 sm:p-6">
+              <div className="text-center space-y-3">
+                <CardTitle className="text-xl sm:text-2xl bg-gradient-to-r from-electric-blue-600 to-smart-purple-600 bg-clip-text text-transparent">
                   Area Cliente
                 </CardTitle>
-                <p className="text-gray-600 mt-2">
-                  Benvenuto nella tua area personale, {profile?.first_name || user?.email?.split('@')[0]}
+                <p className="text-sm sm:text-base text-gray-600">
+                  Benvenuto, {profile?.first_name || user?.email?.split('@')[0]}
                 </p>
                 {profile && (
-                  <div className="mt-4 p-4 bg-white/50 rounded-lg">
-                    <h3 className="font-semibold text-gray-800 mb-2">I tuoi dati:</h3>
-                    <p className="text-sm text-gray-600">Nome: {profile.first_name} {profile.last_name}</p>
-                    <p className="text-sm text-gray-600">Email: {profile.email}</p>
-                    <p className="text-sm text-gray-600">Registrato il: {new Date(profile.created_at).toLocaleDateString('it-IT')}</p>
+                  <div className="p-3 sm:p-4 bg-white/50 rounded-lg text-left">
+                    <h3 className="font-semibold text-gray-800 mb-2 text-sm sm:text-base">I tuoi dati:</h3>
+                    <div className="space-y-1 text-xs sm:text-sm text-gray-600">
+                      <p>Nome: {profile.first_name} {profile.last_name}</p>
+                      <p className="break-all">Email: {profile.email}</p>
+                      <p>Registrato il: {new Date(profile.created_at).toLocaleDateString('it-IT')}</p>
+                    </div>
                   </div>
                 )}
               </div>
             </CardHeader>
           </Card>
 
-          {/* Quick Actions */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {/* Quick Actions - Stack on mobile, grid on larger screens */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
             <Button
               onClick={() => navigate('/create-project')}
-              className="h-16 bg-gradient-to-r from-electric-blue-500 to-smart-purple-500 hover:from-electric-blue-600 hover:to-smart-purple-600 text-white"
+              className="h-14 sm:h-16 bg-gradient-to-r from-electric-blue-500 to-smart-purple-500 hover:from-electric-blue-600 hover:to-smart-purple-600 text-white text-sm sm:text-base"
             >
-              <Plus className="w-5 h-5 mr-2" />
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               Nuovo Progetto
             </Button>
             <Button
               onClick={() => navigate('/my-projects')}
               variant="outline"
-              className="h-16 border-electric-blue-500 text-electric-blue-600 hover:bg-electric-blue-50"
+              className="h-14 sm:h-16 border-electric-blue-500 text-electric-blue-600 hover:bg-electric-blue-50 text-sm sm:text-base"
             >
-              <Briefcase className="w-5 h-5 mr-2" />
+              <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               I Miei Progetti
             </Button>
             <Button
               onClick={() => navigate('/chat')}
               variant="outline"
-              className="h-16 border-smart-purple-500 text-smart-purple-600 hover:bg-smart-purple-50"
+              className="h-14 sm:h-16 border-smart-purple-500 text-smart-purple-600 hover:bg-smart-purple-50 text-sm sm:text-base"
             >
-              <MessageSquare className="w-5 h-5 mr-2" />
+              <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               Chat Supporto
             </Button>
             <Button
               onClick={() => navigate('/profile')}
               variant="outline"
-              className="h-16"
+              className="h-14 sm:h-16 text-sm sm:text-base"
             >
-              <User className="w-5 h-5 mr-2" />
+              <User className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               Il Mio Profilo
             </Button>
           </div>
 
-          {/* Project Statistics */}
-          <div className="grid md:grid-cols-4 gap-4 mb-6">
+          {/* Project Statistics - 2x2 grid on mobile, 4x1 on larger screens */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Card className="glass-card">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-gray-800">{projectStats.total}</div>
-                <div className="text-sm text-gray-600">Progetti Totali</div>
+              <CardContent className="p-3 sm:p-4 text-center">
+                <div className="text-xl sm:text-2xl font-bold text-gray-800">{projectStats.total}</div>
+                <div className="text-xs sm:text-sm text-gray-600">Progetti Totali</div>
               </CardContent>
             </Card>
             <Card className="glass-card">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-yellow-600">{projectStats.pending}</div>
-                <div className="text-sm text-gray-600">In Attesa</div>
+              <CardContent className="p-3 sm:p-4 text-center">
+                <div className="text-xl sm:text-2xl font-bold text-yellow-600">{projectStats.pending}</div>
+                <div className="text-xs sm:text-sm text-gray-600">In Attesa</div>
               </CardContent>
             </Card>
             <Card className="glass-card">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-blue-600">{projectStats.inProgress}</div>
-                <div className="text-sm text-gray-600">In Corso</div>
+              <CardContent className="p-3 sm:p-4 text-center">
+                <div className="text-xl sm:text-2xl font-bold text-blue-600">{projectStats.inProgress}</div>
+                <div className="text-xs sm:text-sm text-gray-600">In Corso</div>
               </CardContent>
             </Card>
             <Card className="glass-card">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-green-600">{projectStats.completed}</div>
-                <div className="text-sm text-gray-600">Completati</div>
+              <CardContent className="p-3 sm:p-4 text-center">
+                <div className="text-xl sm:text-2xl font-bold text-green-600">{projectStats.completed}</div>
+                <div className="text-xs sm:text-sm text-gray-600">Completati</div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-6">
+          {/* Main Content - Stack on mobile, side by side on larger screens */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
             {/* Recent Projects */}
             <Card className="glass-card">
-              <CardHeader>
+              <CardHeader className="p-4 sm:p-6">
                 <div className="flex justify-between items-center">
-                  <CardTitle className="flex items-center gap-2">
-                    <Briefcase className="w-5 h-5 text-electric-blue-500" />
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                    <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-electric-blue-500" />
                     Progetti Recenti
                   </CardTitle>
                   <Button
                     onClick={() => navigate('/my-projects')}
                     variant="ghost"
                     size="sm"
+                    className="text-xs sm:text-sm"
                   >
                     Vedi Tutti
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6 pt-0">
                 {recentProjects.length > 0 ? (
                   <div className="space-y-3">
                     {recentProjects.map((project) => (
                       <div key={project.id} className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-800">{project.title}</h4>
-                          <p className="text-sm text-gray-600 capitalize">{project.project_type}</p>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-gray-800 text-sm sm:text-base truncate">{project.title}</h4>
+                          <p className="text-xs sm:text-sm text-gray-600 capitalize">{project.project_type}</p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 ml-2">
                           {getStatusIcon(project.status)}
-                          <span className="text-sm">{getStatusText(project.status)}</span>
+                          <span className="text-xs sm:text-sm whitespace-nowrap">{getStatusText(project.status)}</span>
                         </div>
                       </div>
                     ))}
@@ -249,11 +254,11 @@ const Dashboard = () => {
                 ) : (
                   <div className="text-center py-6">
                     <Briefcase className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-600 mb-4">Nessun progetto ancora</p>
+                    <p className="text-gray-600 mb-4 text-sm sm:text-base">Nessun progetto ancora</p>
                     <Button
                       onClick={() => navigate('/create-project')}
                       size="sm"
-                      className="bg-gradient-to-r from-electric-blue-500 to-smart-purple-500 hover:from-electric-blue-600 hover:to-smart-purple-600"
+                      className="bg-gradient-to-r from-electric-blue-500 to-smart-purple-500 hover:from-electric-blue-600 hover:to-smart-purple-600 text-xs sm:text-sm"
                     >
                       Crea il Primo Progetto
                     </Button>
@@ -264,51 +269,54 @@ const Dashboard = () => {
 
             {/* Quick Tools */}
             <Card className="glass-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-smart-purple-500" />
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-smart-purple-500" />
                   Strumenti Rapidi
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6 pt-0">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
-                    <div>
-                      <h4 className="font-medium text-gray-800">Chat Supporto</h4>
-                      <p className="text-sm text-gray-600">Hai domande? Contattaci</p>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-800 text-sm sm:text-base">Chat Supporto</h4>
+                      <p className="text-xs sm:text-sm text-gray-600">Hai domande? Contattaci</p>
                     </div>
                     <Button
                       onClick={() => navigate('/chat')}
                       size="sm"
                       variant="outline"
+                      className="ml-2"
                     >
                       <MessageSquare className="w-4 h-4" />
                     </Button>
                   </div>
 
                   <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
-                    <div>
-                      <h4 className="font-medium text-gray-800">Profilo</h4>
-                      <p className="text-sm text-gray-600">Gestisci le tue informazioni</p>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-800 text-sm sm:text-base">Profilo</h4>
+                      <p className="text-xs sm:text-sm text-gray-600">Gestisci le tue informazioni</p>
                     </div>
                     <Button
                       onClick={() => navigate('/profile')}
                       size="sm"
                       variant="outline"
+                      className="ml-2"
                     >
                       <User className="w-4 h-4" />
                     </Button>
                   </div>
 
                   <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
-                    <div>
-                      <h4 className="font-medium text-gray-800">I Miei Progetti</h4>
-                      <p className="text-sm text-gray-600">Visualizza tutti i progetti</p>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-800 text-sm sm:text-base">I Miei Progetti</h4>
+                      <p className="text-xs sm:text-sm text-gray-600">Visualizza tutti i progetti</p>
                     </div>
                     <Button
                       onClick={() => navigate('/my-projects')}
                       size="sm"
                       variant="outline"
+                      className="ml-2"
                     >
                       <Briefcase className="w-4 h-4" />
                     </Button>

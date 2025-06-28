@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -191,15 +192,15 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-electric-blue-50 to-smart-purple-50">
       <Header />
-      <div className="p-4">
-        <div className="max-w-7xl mx-auto">
+      <div className="p-3 sm:p-4 lg:p-6">
+        <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
           {/* Header */}
-          <Card className="glass-card mb-6">
-            <CardHeader>
+          <Card className="glass-card">
+            <CardHeader className="p-4 sm:p-6">
               <div className="flex items-center justify-center">
                 <div className="flex items-center gap-2">
-                  <Crown className="w-6 h-6 text-yellow-500" />
-                  <CardTitle className="text-2xl bg-gradient-to-r from-electric-blue-600 to-smart-purple-600 bg-clip-text text-transparent">
+                  <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
+                  <CardTitle className="text-lg sm:text-2xl bg-gradient-to-r from-electric-blue-600 to-smart-purple-600 bg-clip-text text-transparent">
                     Dashboard Amministratore
                   </CardTitle>
                 </div>
@@ -207,41 +208,45 @@ const AdminDashboard = () => {
             </CardHeader>
           </Card>
 
-          {/* Admin Tools Navigation */}
-          <Card className="glass-card mb-6">
-            <CardContent className="p-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Admin Tools Navigation - Responsive Grid */}
+          <Card className="glass-card">
+            <CardContent className="p-4 sm:p-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
                 <Button
                   onClick={() => setActiveTab('overview')}
                   variant={activeTab === 'overview' ? 'default' : 'outline'}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 h-10 sm:h-auto"
                 >
-                  <FolderOpen className="w-4 h-4" />
-                  Panoramica
+                  <FolderOpen className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Panoramica</span>
+                  <span className="sm:hidden">Overview</span>
                 </Button>
                 <Button
                   onClick={() => setActiveTab('projects')}
                   variant={activeTab === 'projects' ? 'default' : 'outline'}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 h-10 sm:h-auto"
                 >
-                  <Settings className="w-4 h-4" />
-                  Gestione Progetti
+                  <Settings className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Gestione Progetti</span>
+                  <span className="sm:hidden">Progetti</span>
                 </Button>
                 <Button
                   onClick={() => setActiveTab('chat')}
                   variant={activeTab === 'chat' ? 'default' : 'outline'}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 h-10 sm:h-auto"
                 >
-                  <MessageSquare className="w-4 h-4" />
-                  Gestione Chat
+                  <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Gestione Chat</span>
+                  <span className="sm:hidden">Chat</span>
                 </Button>
                 <Button
                   onClick={() => setActiveTab('users')}
                   variant={activeTab === 'users' ? 'default' : 'outline'}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 h-10 sm:h-auto"
                 >
-                  <UserCheck className="w-4 h-4" />
-                  Gestione Utenti
+                  <UserCheck className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Gestione Utenti</span>
+                  <span className="sm:hidden">Utenti</span>
                 </Button>
               </div>
             </CardContent>
@@ -250,10 +255,10 @@ const AdminDashboard = () => {
           {/* Chat Management */}
           {activeTab === 'chat' && (
             <Card className="glass-card">
-              <CardHeader>
-                <CardTitle>Gestione Chat</CardTitle>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">Gestione Chat</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6 pt-0">
                 <AdminChatInterface />
               </CardContent>
             </Card>
@@ -262,10 +267,10 @@ const AdminDashboard = () => {
           {/* Users Management */}
           {activeTab === 'users' && (
             <Card className="glass-card">
-              <CardHeader>
-                <CardTitle>Gestione Utenti</CardTitle>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">Gestione Utenti</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6 pt-0">
                 <UserManagementInterface />
               </CardContent>
             </Card>
@@ -274,38 +279,38 @@ const AdminDashboard = () => {
           {/* Overview Stats */}
           {activeTab === 'overview' && (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                 <Card className="glass-card">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4">
-                      <FolderOpen className="w-8 h-8 text-electric-blue-500" />
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <FolderOpen className="w-6 h-6 sm:w-8 sm:h-8 text-electric-blue-500 shrink-0" />
                       <div>
-                        <p className="text-2xl font-bold">{projects.length}</p>
-                        <p className="text-gray-600">Progetti Totali</p>
+                        <p className="text-xl sm:text-2xl font-bold">{projects.length}</p>
+                        <p className="text-sm sm:text-base text-gray-600">Progetti Totali</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="glass-card">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4">
-                      <Users className="w-8 h-8 text-smart-purple-500" />
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <Users className="w-6 h-6 sm:w-8 sm:h-8 text-smart-purple-500 shrink-0" />
                       <div>
-                        <p className="text-2xl font-bold">{projects.filter(p => p.status === 'pending').length}</p>
-                        <p className="text-gray-600">In Attesa</p>
+                        <p className="text-xl sm:text-2xl font-bold">{projects.filter(p => p.status === 'pending').length}</p>
+                        <p className="text-sm sm:text-base text-gray-600">In Attesa</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="glass-card">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4">
-                      <MessageSquare className="w-8 h-8 text-green-500" />
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <MessageSquare className="w-6 h-6 sm:w-8 sm:h-8 text-green-500 shrink-0" />
                       <div>
-                        <p className="text-2xl font-bold">{projects.filter(p => p.status === 'in_progress').length}</p>
-                        <p className="text-gray-600">In Corso</p>
+                        <p className="text-xl sm:text-2xl font-bold">{projects.filter(p => p.status === 'in_progress').length}</p>
+                        <p className="text-sm sm:text-base text-gray-600">In Corso</p>
                       </div>
                     </div>
                   </CardContent>
@@ -314,31 +319,32 @@ const AdminDashboard = () => {
 
               {/* Recent Projects Overview */}
               <Card className="glass-card">
-                <CardHeader>
+                <CardHeader className="p-4 sm:p-6">
                   <div className="flex justify-between items-center">
-                    <CardTitle>Progetti Recenti</CardTitle>
+                    <CardTitle className="text-base sm:text-lg">Progetti Recenti</CardTitle>
                     <Button
                       onClick={() => setActiveTab('projects')}
                       variant="outline"
                       size="sm"
+                      className="text-xs sm:text-sm"
                     >
                       Vedi Tutti
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
+                <CardContent className="p-4 sm:p-6 pt-0">
+                  <div className="space-y-3 sm:space-y-4">
                     {projects.slice(0, 5).map((project) => (
                       <Card key={project.id} className="border">
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <h4 className="font-semibold">{project.title}</h4>
-                              <p className="text-sm text-gray-600">
+                        <CardContent className="p-3 sm:p-4">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-sm sm:text-base truncate">{project.title}</h4>
+                              <p className="text-xs sm:text-sm text-gray-600 truncate">
                                 {project.user_profile?.first_name} {project.user_profile?.last_name}
                               </p>
                             </div>
-                            <Badge className={getStatusColor(project.status)}>
+                            <Badge className={`${getStatusColor(project.status)} shrink-0`}>
                               {getStatusText(project.status)}
                             </Badge>
                           </div>
@@ -354,62 +360,67 @@ const AdminDashboard = () => {
           {/* Projects Management */}
           {activeTab === 'projects' && (
             <Card className="glass-card">
-              <CardHeader>
-                <CardTitle>Gestione Progetti</CardTitle>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">Gestione Progetti</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="p-4 sm:p-6 pt-0">
+                <div className="space-y-3 sm:space-y-4">
                   {projects.map((project) => (
                     <Card key={project.id} className="border">
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-lg mb-2">{project.title}</h3>
-                            <p className="text-gray-600 mb-2">{project.description}</p>
-                            <div className="flex flex-wrap gap-2 mb-2">
-                              <Badge variant="outline">{project.project_type}</Badge>
-                              {project.budget_range && <Badge variant="outline">{project.budget_range}</Badge>}
-                              {project.timeline && <Badge variant="outline">{project.timeline}</Badge>}
+                      <CardContent className="p-4 sm:p-6">
+                        <div className="space-y-3 sm:space-y-4">
+                          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-3">
+                            <div className="flex-1 space-y-2">
+                              <h3 className="font-semibold text-base sm:text-lg">{project.title}</h3>
+                              <p className="text-sm sm:text-base text-gray-600 line-clamp-2">{project.description}</p>
+                              <div className="flex flex-wrap gap-1 sm:gap-2">
+                                <Badge variant="outline" className="text-xs">{project.project_type}</Badge>
+                                {project.budget_range && <Badge variant="outline" className="text-xs">{project.budget_range}</Badge>}
+                                {project.timeline && <Badge variant="outline" className="text-xs">{project.timeline}</Badge>}
+                              </div>
+                              <div className="space-y-1 text-xs sm:text-sm text-gray-500">
+                                <p className="break-all">
+                                  Cliente: {project.user_profile?.first_name || 'N/A'} {project.user_profile?.last_name || ''} ({project.user_profile?.email || 'Email non disponibile'})
+                                </p>
+                                <p>
+                                  Creato: {new Date(project.created_at).toLocaleDateString('it-IT')}
+                                </p>
+                              </div>
                             </div>
-                            <p className="text-sm text-gray-500">
-                              Cliente: {project.user_profile?.first_name || 'N/A'} {project.user_profile?.last_name || ''} ({project.user_profile?.email || 'Email non disponibile'})
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              Creato: {new Date(project.created_at).toLocaleDateString('it-IT')}
-                            </p>
-                          </div>
-                          <div className="flex flex-col items-end gap-2">
-                            <Badge className={getStatusColor(project.status)}>
-                              {getStatusText(project.status)}
-                            </Badge>
-                            <div className="flex gap-2">
-                              {project.status === 'pending' && (
-                                <>
+                            <div className="flex flex-col items-start lg:items-end gap-2">
+                              <Badge className={getStatusColor(project.status)}>
+                                {getStatusText(project.status)}
+                              </Badge>
+                              <div className="flex flex-wrap gap-2">
+                                {project.status === 'pending' && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => updateProjectStatus(project.id, 'in_progress')}
+                                      className="bg-blue-500 hover:bg-blue-600 text-xs sm:text-sm"
+                                    >
+                                      Accetta
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => updateProjectStatus(project.id, 'rejected')}
+                                      className="text-xs sm:text-sm"
+                                    >
+                                      Rifiuta
+                                    </Button>
+                                  </>
+                                )}
+                                {project.status === 'in_progress' && (
                                   <Button
                                     size="sm"
-                                    onClick={() => updateProjectStatus(project.id, 'in_progress')}
-                                    className="bg-blue-500 hover:bg-blue-600"
+                                    onClick={() => updateProjectStatus(project.id, 'completed')}
+                                    className="bg-green-500 hover:bg-green-600 text-xs sm:text-sm"
                                   >
-                                    Accetta
+                                    Completa
                                   </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => updateProjectStatus(project.id, 'rejected')}
-                                  >
-                                    Rifiuta
-                                  </Button>
-                                </>
-                              )}
-                              {project.status === 'in_progress' && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => updateProjectStatus(project.id, 'completed')}
-                                  className="bg-green-500 hover:bg-green-600"
-                                >
-                                  Completa
-                                </Button>
-                              )}
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -417,10 +428,10 @@ const AdminDashboard = () => {
                     </Card>
                   ))}
                   {projects.length === 0 && !loading && (
-                    <p className="text-center text-gray-500 py-8">Nessun progetto trovato</p>
+                    <p className="text-center text-gray-500 py-8 text-sm sm:text-base">Nessun progetto trovato</p>
                   )}
                   {loading && (
-                    <p className="text-center text-gray-500 py-8">Caricamento progetti...</p>
+                    <p className="text-center text-gray-500 py-8 text-sm sm:text-base">Caricamento progetti...</p>
                   )}
                 </div>
               </CardContent>
