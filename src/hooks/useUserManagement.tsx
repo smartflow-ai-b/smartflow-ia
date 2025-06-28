@@ -14,8 +14,8 @@ export interface UserProfile {
   blocked_at: string | null;
   created_at: string;
   updated_at: string;
-  user_roles?: { role: string }[];
-  projects?: { id: string; title: string; status: string }[];
+  user_roles?: { role: string }[] | null;
+  projects?: { id: string; title: string; status: string }[] | null;
 }
 
 export const useUserManagement = () => {
@@ -26,17 +26,38 @@ export const useUserManagement = () => {
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['allUsers'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get all users
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          user_roles(role),
-          projects(id, title, status)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data as UserProfile[];
+      if (profilesError) throw profilesError;
+
+      // Then get user roles and projects for each user
+      const usersWithDetails = await Promise.all(
+        (profilesData || []).map(async (profile) => {
+          // Get user roles
+          const { data: userRoles } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', profile.id);
+
+          // Get user projects
+          const { data: userProjects } = await supabase
+            .from('projects')
+            .select('id, title, status')
+            .eq('user_id', profile.id);
+
+          return {
+            ...profile,
+            user_roles: userRoles || [],
+            projects: userProjects || []
+          };
+        })
+      );
+
+      return usersWithDetails as UserProfile[];
     },
     enabled: isAdmin,
   });
