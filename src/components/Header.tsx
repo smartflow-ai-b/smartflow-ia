@@ -1,14 +1,16 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { LogIn, LogOut, Settings, User, Home } from 'lucide-react';
+import { LogIn, LogOut, Settings, User, Home, Menu, X } from 'lucide-react';
 import NotificationCenter from './NotificationCenter';
+import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 
 const Header = () => {
   const { user, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleAuthAction = async () => {
     if (user) {
@@ -17,6 +19,12 @@ const Header = () => {
     } else {
       navigate('/auth');
     }
+    setMobileMenuOpen(false);
+  };
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    setMobileMenuOpen(false);
   };
 
   return (
@@ -35,6 +43,7 @@ const Header = () => {
             </h1>
           </div>
           
+          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
             <Button 
               variant="ghost" 
@@ -52,7 +61,8 @@ const Header = () => {
             </Button>
           </nav>
 
-          <div className="flex items-center space-x-4">
+          {/* Desktop Auth Section */}
+          <div className="hidden md:flex items-center space-x-4">
             {user && <NotificationCenter />}
             
             {user ? (
@@ -62,7 +72,6 @@ const Header = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => navigate('/admin')}
-                    className="hidden sm:flex"
                   >
                     <Settings className="w-4 h-4 mr-2" />
                     Admin
@@ -72,7 +81,6 @@ const Header = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => navigate('/dashboard')}
-                  className="hidden sm:flex"
                 >
                   <User className="w-4 h-4 mr-2" />
                   Dashboard
@@ -83,7 +91,7 @@ const Header = () => {
                   className="flex items-center gap-2"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span className="hidden sm:inline">Esci</span>
+                  Esci
                 </Button>
               </div>
             ) : (
@@ -95,6 +103,88 @@ const Header = () => {
                 Accedi
               </Button>
             )}
+          </div>
+
+          {/* Mobile Menu */}
+          <div className="md:hidden flex items-center space-x-2">
+            {user && <NotificationCenter />}
+            
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-80">
+                <div className="flex flex-col space-y-4 mt-6">
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => handleNavigation('/')}
+                    className="justify-start"
+                  >
+                    <Home className="w-4 h-4 mr-2" />
+                    Home
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => handleNavigation('/services')}
+                    className="justify-start"
+                  >
+                    Servizi
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => handleNavigation('/contact')}
+                    className="justify-start"
+                  >
+                    Contatti
+                  </Button>
+
+                  {user ? (
+                    <>
+                      <hr className="my-4" />
+                      <Button
+                        variant="ghost"
+                        onClick={() => handleNavigation('/dashboard')}
+                        className="justify-start"
+                      >
+                        <User className="w-4 h-4 mr-2" />
+                        Dashboard
+                      </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleNavigation('/admin')}
+                          className="justify-start"
+                        >
+                          <Settings className="w-4 h-4 mr-2" />
+                          Admin
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        onClick={handleAuthAction}
+                        className="justify-start text-red-600"
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Esci
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <hr className="my-4" />
+                      <Button
+                        onClick={handleAuthAction}
+                        className="bg-gradient-to-r from-electric-blue-500 to-smart-purple-500 hover:from-electric-blue-600 hover:to-smart-purple-600 text-white justify-start"
+                      >
+                        <LogIn className="w-4 h-4 mr-2" />
+                        Accedi
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </div>
