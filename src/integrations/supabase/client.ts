@@ -23,5 +23,25 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     headers: {
       'x-application-name': 'SmartFlow'
     }
+  },
+  // Configurazioni aggiuntive per migliorare la sicurezza e la stabilità
+  db: {
+    schema: 'public'
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
+  }
+});
+
+// Aggiungi listener per errori di connessione
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'TOKEN_REFRESHED') {
+    console.log('Token refreshed successfully');
+  } else if (event === 'SIGNED_OUT') {
+    console.log('User signed out');
+    // Pulisci eventuali dati residui
+    localStorage.removeItem('smartflow-auth-state');
   }
 });
