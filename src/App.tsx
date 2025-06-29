@@ -22,29 +22,16 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
-  const { loading, error } = useAuth();
+  const { loading, error, loadingStep } = useAuth();
 
-  // Mostra la schermata di loading durante l'inizializzazione dell'auth
+  // Mostra la schermata di loading con feedback dettagliato durante l'inizializzazione
   if (loading) {
-    return <AuthLoadingScreen />;
+    return <AuthLoadingScreen loadingStep={loadingStep} error={error} />;
   }
 
-  // Se c'è un errore critico nell'auth, mostra un messaggio di errore
+  // Se c'è un errore critico nell'auth, mostra la schermata di errore
   if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-electric-blue-50 to-smart-purple-50 flex items-center justify-center p-4">
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-red-600 mb-2">Errore di Autenticazione</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="bg-gradient-to-r from-electric-blue-500 to-smart-purple-500 text-white px-4 py-2 rounded"
-          >
-            Ricarica Pagina
-          </button>
-        </div>
-      </div>
-    );
+    return <AuthLoadingScreen loadingStep="Errore di sistema" error={error} />;
   }
 
   return (
@@ -60,12 +47,10 @@ const AppContent = () => {
       <Route path="/services" element={<Services />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/settings" element={<Settings />} />
-      {/* Services sub-pages */}
       <Route path="/services/websites" element={<Services />} />
       <Route path="/services/apps" element={<Services />} />
       <Route path="/services/ecommerce" element={<Services />} />
       <Route path="/services/ai-consulting" element={<Services />} />
-      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

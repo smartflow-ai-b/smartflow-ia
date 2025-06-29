@@ -9,6 +9,7 @@ interface AuthState {
   isAdmin: boolean;
   loading: boolean;
   error: string | null;
+  loadingStep: string;
 }
 
 const STORAGE_KEY = 'smartflow-auth-state';
@@ -19,57 +20,18 @@ export const useSecureAuth = () => {
     session: null,
     isAdmin: false,
     loading: true,
-    error: null
+    error: null,
+    loadingStep: 'Inizializzazione...'
   });
 
-  // Funzione per salvare lo stato di auth nel localStorage
-  const saveAuthState = useCallback((session: Session | null, isAdmin: boolean = false) => {
-    try {
-      if (session) {
-        const authData = {
-          session: session,
-          isAdmin: isAdmin,
-          timestamp: Date.now()
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(authData));
-      } else {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    } catch (error) {
-      console.error('Errore nel salvare lo stato di auth:', error);
-    }
-  }, []);
+  const updateLoadingStep = (step: string) => {
+    console.log('Auth step:', step);
+    setAuthState(prev => ({ ...prev, loadingStep: step }));
+  };
 
-  // Funzione per recuperare lo stato di auth dal localStorage
-  const loadAuthState = useCallback(async (): Promise<{ session: Session | null; isAdmin: boolean }> => {
-    try {
-      const storedData = localStorage.getItem(STORAGE_KEY);
-      if (storedData) {
-        const parsedData = JSON.parse(storedData);
-        
-        // Controlla se i dati sono troppo vecchi (più di 24 ore)
-        const maxAge = 24 * 60 * 60 * 1000; // 24 ore
-        if (Date.now() - parsedData.timestamp > maxAge) {
-          localStorage.removeItem(STORAGE_KEY);
-          return { session: null, isAdmin: false };
-        }
-        
-        return {
-          session: parsedData.session,
-          isAdmin: parsedData.isAdmin || false
-        };
-      }
-    } catch (error) {
-      console.error('Errore nel recuperare lo stato di auth:', error);
-      localStorage.removeItem(STORAGE_KEY);
-    }
-    
-    return { session: null, isAdmin: false };
-  }, []);
-
-  // Funzione per verificare il ruolo admin
   const checkAdminRole = useCallback(async (userId: string): Promise<boolean> => {
     try {
+      updateLoadingStep('Verifica privilegi amministratore...');
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
@@ -78,30 +40,79 @@ export const useSecureAuth = () => {
         .maybeSingle();
       
       if (error) {
-        console.error('Errore nella verifica ruolo admin:', error);
+        console.error('Errore verifica ruolo admin:', error);
         return false;
       }
       
-      return !!data;
+      const isAdmin = !!data;
+      updateLoadingStep(isAdmin ? 'Privilegi amministratore confermati' : 'Utente standard');
+      return isAdmin;
     } catch (error) {
       console.error('Errore in checkAdminRole:', error);
       return false;
     }
   }, []);
 
-  // Funzione per aggiornare lo stato di autenticazione
-  const updateAuthState = useCallback(async (session: Session | null) => {
-    setAuthState(prev => ({ ...prev, loading: true, error: null }));
-    
+  const saveAuthState = useCallback((session: Session | null, isAdmin: boolean = false) => {
+    try {
+      updateLoadingStep('Salvataggio stato autenticazione...');
+      if (session) {
+        const authData = {
+          session: session,
+          isAdmin: isAdmin,
+          timestamp: Date.now()
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(authData));
+        updateLoadingStep('Stato autenticazione salvato');
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+        updateLoadingStep('Stato autenticazione rimosso');
+      }
+    } catch (error) {
+      console.error('Errore nel salvare lo stato di auth:', error);
+    }
+  }, []);
+
+  const loadAuthFromStorage = useCallback(() => {
+    try {
+      updateLoadingStep('Recupero dati di autenticazione locali...');
+      const storedData = localStorage.getItem(STORAGE_KEY);
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        
+        // Controlla se i dati sono troppo vecchi (più di 24 ore)
+        const maxAge = 24 * 60 * 60 * 1000;
+        if (Date.now() - parsedData.timestamp > maxAge) {
+          updateLoadingStep('Dati locali scaduti, rimozione...');
+          localStorage.removeItem(STORAGE_KEY);
+          return null;
+        }
+        
+        updateLoadingStep('Dati locali recuperati con successo');
+        return {
+          session: parsedData.session,
+          isAdmin: parsedData.isAdmin || false
+        };
+      }
+      updateLoadingStep('Nessun dato locale trovato');
+      return null;
+    } catch (error) {
+      console.error('Errore nel recuperare lo stato di auth:', error);
+      updateLoadingStep('Errore nel recupero dati locali');
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+  }, []);
+
+  const updateAuthState = useCallback(async (session: Session | null, skipAdminCheck = false) => {
     try {
       const user = session?.user ?? null;
       let isAdmin = false;
       
-      if (user) {
+      if (user && !skipAdminCheck) {
         isAdmin = await checkAdminRole(user.id);
       }
       
-      // Salva lo stato nel localStorage
       saveAuthState(session, isAdmin);
       
       setAuthState({
@@ -109,68 +120,82 @@ export const useSecureAuth = () => {
         session,
         isAdmin,
         loading: false,
-        error: null
+        error: null,
+        loadingStep: session ? 'Autenticazione completata' : 'Non autenticato'
       });
     } catch (error) {
       console.error('Errore nell\'aggiornamento dello stato di auth:', error);
       setAuthState(prev => ({
         ...prev,
         loading: false,
-        error: 'Errore nell\'autenticazione'
+        error: 'Errore nell\'autenticazione',
+        loadingStep: 'Errore durante l\'autenticazione'
       }));
     }
   }, [checkAdminRole, saveAuthState]);
 
-  // Funzione per recuperare e validare la sessione
-  const recoverSession = useCallback(async () => {
+  const initializeAuth = useCallback(async () => {
     try {
-      // Prima controlla il localStorage
-      const localAuth = await loadAuthState();
+      updateLoadingStep('Controllo sessione Supabase...');
       
-      // Poi controlla con Supabase per validare la sessione
+      // Prima controlla la sessione corrente in Supabase
       const { data: { session: supabaseSession }, error } = await supabase.auth.getSession();
       
       if (error) {
         console.error('Errore nel recupero sessione Supabase:', error);
-        // Se c'è un errore, usa i dati locali se disponibili
-        if (localAuth.session) {
-          await updateAuthState(localAuth.session);
-          return;
+        updateLoadingStep('Errore connessione Supabase, controllo dati locali...');
+        
+        // Se c'è un errore con Supabase, prova con i dati locali
+        const localAuth = loadAuthFromStorage();
+        if (localAuth?.session) {
+          await updateAuthState(localAuth.session, false);
+        } else {
+          await updateAuthState(null);
         }
+        return;
       }
-      
-      // Se le sessioni non corrispondono, usa quella di Supabase (più aggiornata)
+
       if (supabaseSession) {
+        updateLoadingStep('Sessione Supabase attiva, aggiornamento stato...');
         await updateAuthState(supabaseSession);
-      } else if (localAuth.session) {
-        // Se Supabase non ha sessione ma localStorage sì, verifica se è ancora valida
-        try {
-          const { data: user } = await supabase.auth.getUser(localAuth.session.access_token);
-          if (user.user) {
-            await updateAuthState(localAuth.session);
-          } else {
-            // Token non valido, rimuovi dai dati locali
+      } else {
+        updateLoadingStep('Nessuna sessione Supabase, controllo dati locali...');
+        const localAuth = loadAuthFromStorage();
+        
+        if (localAuth?.session) {
+          updateLoadingStep('Validazione sessione locale...');
+          try {
+            // Verifica se la sessione locale è ancora valida
+            const { data: userData, error: userError } = await supabase.auth.getUser(localAuth.session.access_token);
+            
+            if (!userError && userData.user) {
+              updateLoadingStep('Sessione locale valida, ripristino...');
+              await updateAuthState(localAuth.session);
+            } else {
+              updateLoadingStep('Sessione locale scaduta, rimozione...');
+              localStorage.removeItem(STORAGE_KEY);
+              await updateAuthState(null);
+            }
+          } catch {
+            updateLoadingStep('Errore validazione sessione locale, rimozione...');
             localStorage.removeItem(STORAGE_KEY);
             await updateAuthState(null);
           }
-        } catch {
-          localStorage.removeItem(STORAGE_KEY);
+        } else {
           await updateAuthState(null);
         }
-      } else {
-        await updateAuthState(null);
       }
     } catch (error) {
-      console.error('Errore nel recupero della sessione:', error);
+      console.error('Errore nell\'inizializzazione auth:', error);
       setAuthState(prev => ({
         ...prev,
         loading: false,
-        error: 'Errore nel recupero della sessione'
+        error: 'Errore critico nell\'inizializzazione',
+        loadingStep: 'Errore critico'
       }));
     }
-  }, [loadAuthState, updateAuthState]);
+  }, [loadAuthFromStorage, updateAuthState]);
 
-  // Inizializzazione e setup dei listener
   useEffect(() => {
     let isMounted = true;
     
@@ -180,21 +205,28 @@ export const useSecureAuth = () => {
         if (!isMounted) return;
         
         console.log('Auth state changed:', event, session?.user?.id);
-        await updateAuthState(session);
+        updateLoadingStep(`Evento autenticazione: ${event}`);
+        
+        // Piccolo delay per evitare race conditions
+        setTimeout(async () => {
+          if (isMounted) {
+            await updateAuthState(session);
+          }
+        }, 100);
       }
     );
 
-    // Recupera la sessione iniziale
-    recoverSession();
+    // Inizializza l'autenticazione
+    initializeAuth();
 
     return () => {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [updateAuthState, recoverSession]);
+  }, [updateAuthState, initializeAuth]);
 
-  // Funzioni di autenticazione
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
+    updateLoadingStep('Registrazione in corso...');
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
@@ -208,41 +240,58 @@ export const useSecureAuth = () => {
         }
       }
     });
+    
+    if (error) {
+      updateLoadingStep('Errore durante la registrazione');
+    } else {
+      updateLoadingStep('Registrazione completata');
+    }
+    
     return { error };
   };
 
   const signIn = async (email: string, password: string) => {
+    updateLoadingStep('Accesso in corso...');
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
+    
+    if (error) {
+      updateLoadingStep('Errore durante l\'accesso');
+    } else {
+      updateLoadingStep('Accesso completato');
+    }
+    
     return { error };
   };
 
   const signOut = async () => {
     try {
+      updateLoadingStep('Disconnessione in corso...');
       const { error } = await supabase.auth.signOut();
       
-      // Rimuovi sempre i dati locali
       localStorage.removeItem(STORAGE_KEY);
       
       if (error) {
         console.error('Errore durante il logout:', error);
+        updateLoadingStep('Errore durante la disconnessione');
         return { error };
       }
       
-      // Reset immediato dello stato
       setAuthState({
         user: null,
         session: null,
         isAdmin: false,
         loading: false,
-        error: null
+        error: null,
+        loadingStep: 'Disconnesso'
       });
       
       return { error: null };
     } catch (error) {
       console.error('Errore imprevisto durante il logout:', error);
+      updateLoadingStep('Errore imprevisto durante la disconnessione');
       return { error: error as Error };
     }
   };
@@ -253,9 +302,9 @@ export const useSecureAuth = () => {
     loading: authState.loading,
     isAdmin: authState.isAdmin,
     error: authState.error,
+    loadingStep: authState.loadingStep,
     signUp,
     signIn,
-    signOut,
-    recoverSession
+    signOut
   };
 };
