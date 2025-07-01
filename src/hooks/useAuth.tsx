@@ -12,17 +12,59 @@ interface AuthState {
   loadingStep: string;
 }
 
-export const useAuth = () => {
-  const [authState, setAuthState] = useState<AuthState>({
-    user: null,
-    session: null,
-    isAdmin: false,
-    loading: true,
-    error: null,
-    loadingStep: 'Inizializzazione...'
-  });
+// Singleton pattern per evitare inizializzazioni multiple
+class AuthManager {
+  private static instance: AuthManager;
+  private authState: AuthState;
+  private listeners: Set<(state: AuthState) => void>;
+  private subscription: any = null;
+  private initialized = false;
 
-  const checkAdminRole = useCallback(async (userId: string): Promise<boolean> => {
+  private constructor() {
+    this.authState = {
+      user: null,
+      session: null,
+      isAdmin: false,
+      loading: true,
+      error: null,
+      loadingStep: 'Inizializzazione...'
+    };
+    this.listeners = new Set();
+  }
+
+  static getInstance(): AuthManager {
+    if (!AuthManager.instance) {
+      AuthManager.instance = new AuthManager();
+    }
+    return AuthManager.instance;
+  }
+
+  subscribe(callback: (state: AuthState) => void) {
+    this.listeners.add(callback);
+    
+    // Se già inizializzato, invia subito lo stato corrente
+    if (this.initialized) {
+      callback(this.authState);
+    } else {
+      // Inizializza solo una volta
+      this.initialize();
+    }
+
+    return () => {
+      this.listeners.delete(callback);
+    };
+  }
+
+  private notifyListeners() {
+    this.listeners.forEach(callback => callback(this.authState));
+  }
+
+  private updateState(updates: Partial<AuthState>) {
+    this.authState = { ...this.authState, ...updates };
+    this.notifyListeners();
+  }
+
+  private async checkAdminRole(userId: string): Promise<boolean> {
     try {
       const { data, error } = await supabase
         .from('user_roles')
@@ -41,124 +83,101 @@ export const useAuth = () => {
       console.error('Errore in checkAdminRole:', error);
       return false;
     }
-  }, []);
+  }
 
-  useEffect(() => {
-    let isMounted = true;
+  private async initialize() {
+    if (this.initialized) return;
+    
+    this.initialized = true;
+    console.log('Auth Manager: Inizializzazione UNICA');
 
-    const initializeAuth = async () => {
-      try {
-        if (!isMounted) return;
+    try {
+      // Setup listener UNA SOLA VOLTA
+      if (!this.subscription) {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('Auth state changed:', event, session?.user?.id);
+            
+            if (event === 'SIGNED_OUT') {
+              this.updateState({
+                user: null,
+                session: null,
+                isAdmin: false,
+                loading: false,
+                error: null,
+                loadingStep: 'Disconnesso'
+              });
+              return;
+            }
+            
+            if (session && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION')) {
+              this.updateState({ loadingStep: 'Verifica privilegi amministratore...' });
+              
+              const isAdmin = await this.checkAdminRole(session.user.id);
+              
+              this.updateState({
+                user: session.user,
+                session,
+                isAdmin,
+                loading: false,
+                error: null,
+                loadingStep: 'Autenticazione completata'
+              });
+            }
+          }
+        );
+        this.subscription = subscription;
+      }
+
+      // Controlla sessione corrente UNA SOLA VOLTA
+      this.updateState({ loadingStep: 'Controllo sessione Supabase...' });
+      
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Errore sessione:', error);
+        this.updateState({
+          loading: false,
+          error: 'Errore nell\'autenticazione',
+          loadingStep: 'Errore'
+        });
+        return;
+      }
+
+      if (session) {
+        this.updateState({ loadingStep: 'Verifica privilegi amministratore...' });
+        const isAdmin = await this.checkAdminRole(session.user.id);
         
-        console.log('Auth step: Controllo sessione Supabase...');
-        setAuthState(prev => ({ ...prev, loadingStep: 'Controllo sessione Supabase...' }));
-
-        // Controlla sessione corrente UNA SOLA VOLTA
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (!isMounted) return;
-        
-        if (error) {
-          console.error('Errore sessione:', error);
-          setAuthState({
-            user: null,
-            session: null,
-            isAdmin: false,
-            loading: false,
-            error: 'Errore nell\'autenticazione',
-            loadingStep: 'Errore'
-          });
-          return;
-        }
-
-        if (session) {
-          console.log('Auth step: Verifica privilegi amministratore...');
-          setAuthState(prev => ({ ...prev, loadingStep: 'Verifica privilegi amministratore...' }));
-          
-          const isAdmin = await checkAdminRole(session.user.id);
-          
-          if (!isMounted) return;
-          
-          console.log('Auth step: Autenticazione completata');
-          setAuthState({
-            user: session.user,
-            session,
-            isAdmin,
-            loading: false,
-            error: null,
-            loadingStep: 'Autenticazione completata'
-          });
-        } else {
-          console.log('Auth step: Non autenticato');
-          setAuthState({
-            user: null,
-            session: null,
-            isAdmin: false,
-            loading: false,
-            error: null,
-            loadingStep: 'Non autenticato'
-          });
-        }
-      } catch (error) {
-        console.error('Errore inizializzazione auth:', error);
-        if (!isMounted) return;
-        setAuthState({
+        this.updateState({
+          user: session.user,
+          session,
+          isAdmin,
+          loading: false,
+          error: null,
+          loadingStep: 'Autenticazione completata'
+        });
+      } else {
+        this.updateState({
           user: null,
           session: null,
           isAdmin: false,
           loading: false,
-          error: 'Errore critico',
-          loadingStep: 'Errore critico'
+          error: null,
+          loadingStep: 'Non autenticato'
         });
       }
-    };
+    } catch (error) {
+      console.error('Errore inizializzazione auth:', error);
+      this.updateState({
+        loading: false,
+        error: 'Errore critico',
+        loadingStep: 'Errore critico'
+      });
+    }
+  }
 
-    // Setup listener per cambiamenti di stato
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!isMounted) return;
-        
-        console.log('Auth state changed:', event, session?.user?.id);
-        
-        if (event === 'SIGNED_OUT') {
-          setAuthState({
-            user: null,
-            session: null,
-            isAdmin: false,
-            loading: false,
-            error: null,
-            loadingStep: 'Disconnesso'
-          });
-          return;
-        }
-        
-        if (session && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-          const isAdmin = await checkAdminRole(session.user.id);
-          if (!isMounted) return;
-          
-          setAuthState({
-            user: session.user,
-            session,
-            isAdmin,
-            loading: false,
-            error: null,
-            loadingStep: 'Autenticazione completata'
-          });
-        }
-      }
-    );
-
-    // Inizializza DOPO aver impostato il listener
-    initializeAuth();
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, [checkAdminRole]);
-
-  const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
-    setAuthState(prev => ({ ...prev, loadingStep: 'Registrazione...', loading: true }));
+  async signUp(email: string, password: string, firstName: string, lastName: string) {
+    this.updateState({ loadingStep: 'Registrazione...', loading: true });
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -171,22 +190,22 @@ export const useAuth = () => {
       }
     });
     return { error };
-  };
+  }
 
-  const signIn = async (email: string, password: string) => {
-    setAuthState(prev => ({ ...prev, loadingStep: 'Accesso...', loading: true }));
+  async signIn(email: string, password: string) {
+    this.updateState({ loadingStep: 'Accesso...', loading: true });
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
     return { error };
-  };
+  }
 
-  const signOut = async () => {
-    setAuthState(prev => ({ ...prev, loadingStep: 'Disconnessione...', loading: true }));
+  async signOut() {
+    this.updateState({ loadingStep: 'Disconnessione...', loading: true });
     const { error } = await supabase.auth.signOut();
     if (!error) {
-      setAuthState({
+      this.updateState({
         user: null,
         session: null,
         isAdmin: false,
@@ -196,7 +215,36 @@ export const useAuth = () => {
       });
     }
     return { error };
-  };
+  }
+
+  cleanup() {
+    if (this.subscription) {
+      this.subscription.unsubscribe();
+      this.subscription = null;
+    }
+    this.initialized = false;
+    this.listeners.clear();
+  }
+}
+
+export const useAuth = () => {
+  const [authState, setAuthState] = useState<AuthState>({
+    user: null,
+    session: null,
+    isAdmin: false,
+    loading: true,
+    error: null,
+    loadingStep: 'Inizializzazione...'
+  });
+
+  useEffect(() => {
+    const authManager = AuthManager.getInstance();
+    const unsubscribe = authManager.subscribe(setAuthState);
+
+    return unsubscribe;
+  }, []);
+
+  const authManager = AuthManager.getInstance();
 
   return {
     user: authState.user,
@@ -205,8 +253,8 @@ export const useAuth = () => {
     isAdmin: authState.isAdmin,
     error: authState.error,
     loadingStep: authState.loadingStep,
-    signUp,
-    signIn,
-    signOut
+    signUp: authManager.signUp.bind(authManager),
+    signIn: authManager.signIn.bind(authManager),
+    signOut: authManager.signOut.bind(authManager)
   };
 };
