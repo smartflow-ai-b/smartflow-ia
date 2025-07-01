@@ -21,17 +21,21 @@ export const useSecureAuth = () => {
     isAdmin: false,
     loading: true,
     error: null,
-    loadingStep: 'Inizializzazione...'
+    loadingStep: 'Inizializzazione sistema autenticazione...'
   });
 
-  const initializationRef = useRef(false);
-  const authListenerRef = useRef<any>(null);
+  // Refs per prevenire multiple inizializzazioni
+  const initializationDone = useRef(false);
+  const authSubscription = useRef<any>(null);
+  const processingState = useRef(false);
 
+  // Funzione per aggiornare il loading step
   const updateLoadingStep = useCallback((step: string) => {
     console.log('Auth step:', step);
     setAuthState(prev => ({ ...prev, loadingStep: step }));
   }, []);
 
+  // Funzione per verificare i privilegi admin
   const checkAdminRole = useCallback(async (userId: string): Promise<boolean> => {
     try {
       updateLoadingStep('Verifica privilegi amministratore...');
@@ -56,6 +60,7 @@ export const useSecureAuth = () => {
     }
   }, [updateLoadingStep]);
 
+  // Funzione per salvare lo stato di autenticazione
   const saveAuthState = useCallback((session: Session | null, isAdmin: boolean = false) => {
     try {
       updateLoadingStep('Salvataggio stato autenticazione...');
@@ -75,7 +80,8 @@ export const useSecureAuth = () => {
     }
   }, [updateLoadingStep]);
 
-  const loadAuthFromStorage = useCallback(() => {
+  // Funzione per recuperare lo stato salvato
+  const loadAuthFromStorage = useCallback((): { session: Session; isAdmin: boolean } | null => {
     try {
       updateLoadingStep('Recupero dati di autenticazione locali...');
       const storedData = localStorage.getItem(STORAGE_KEY);
@@ -104,7 +110,16 @@ export const useSecureAuth = () => {
     }
   }, [updateLoadingStep]);
 
+  // Funzione per finalizzare lo stato di autenticazione
   const finalizeAuthState = useCallback(async (session: Session | null) => {
+    // Previeni chiamate multiple simultanee
+    if (processingState.current) {
+      console.log('Finalizzazione già in corso, salto...');
+      return;
+    }
+    
+    processingState.current = true;
+    
     try {
       const user = session?.user ?? null;
       let isAdmin = false;
@@ -131,105 +146,105 @@ export const useSecureAuth = () => {
         error: 'Errore nell\'autenticazione',
         loadingStep: 'Errore durante l\'autenticazione'
       }));
+    } finally {
+      processingState.current = false;
     }
   }, [checkAdminRole, saveAuthState]);
 
-  const initializeAuth = useCallback(async () => {
-    if (initializationRef.current) {
-      return; // Evita inizializzazioni multiple
+  // Inizializzazione principale (solo una volta)
+  useEffect(() => {
+    if (initializationDone.current) {
+      return;
     }
     
-    initializationRef.current = true;
+    initializationDone.current = true;
     
-    try {
-      updateLoadingStep('Controllo sessione Supabase...');
-      
-      const { data: { session: supabaseSession }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Errore nel recupero sessione Supabase:', error);
-        updateLoadingStep('Errore connessione Supabase, controllo dati locali...');
+    const initializeAuth = async () => {
+      try {
+        updateLoadingStep('Controllo sessione Supabase...');
         
-        const localAuth = loadAuthFromStorage();
-        if (localAuth?.session) {
-          await finalizeAuthState(localAuth.session);
-        } else {
-          await finalizeAuthState(null);
-        }
-        return;
-      }
-
-      if (supabaseSession) {
-        updateLoadingStep('Sessione Supabase attiva, aggiornamento stato...');
-        await finalizeAuthState(supabaseSession);
-      } else {
-        updateLoadingStep('Nessuna sessione Supabase, controllo dati locali...');
-        const localAuth = loadAuthFromStorage();
-        
-        if (localAuth?.session) {
-          updateLoadingStep('Validazione sessione locale...');
-          try {
-            const { data: userData, error: userError } = await supabase.auth.getUser(localAuth.session.access_token);
+        // Setup del listener per i cambiamenti di stato
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('Auth state changed:', event, session?.user?.id);
             
-            if (!userError && userData.user) {
-              updateLoadingStep('Sessione locale valida, ripristino...');
-              await finalizeAuthState(localAuth.session);
-            } else {
-              updateLoadingStep('Sessione locale scaduta, rimozione...');
+            // Gestisci solo eventi importanti
+            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+              updateLoadingStep(`Evento autenticazione: ${event}`);
+              
+              // Usa un timeout per evitare chiamate immediate multiple
+              setTimeout(async () => {
+                await finalizeAuthState(session);
+              }, 100);
+            }
+          }
+        );
+        
+        authSubscription.current = subscription;
+
+        // Controlla la sessione corrente
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Errore nel recupero sessione Supabase:', error);
+          updateLoadingStep('Errore connessione Supabase, controllo dati locali...');
+          
+          const localAuth = loadAuthFromStorage();
+          if (localAuth?.session) {
+            await finalizeAuthState(localAuth.session);
+          } else {
+            await finalizeAuthState(null);
+          }
+          return;
+        }
+
+        if (currentSession) {
+          updateLoadingStep('Sessione Supabase attiva, aggiornamento stato...');
+          await finalizeAuthState(currentSession);
+        } else {
+          updateLoadingStep('Nessuna sessione Supabase, controllo dati locali...');
+          const localAuth = loadAuthFromStorage();
+          
+          if (localAuth?.session) {
+            updateLoadingStep('Validazione sessione locale...');
+            try {
+              const { data: userData, error: userError } = await supabase.auth.getUser(localAuth.session.access_token);
+              
+              if (!userError && userData.user) {
+                updateLoadingStep('Sessione locale valida, ripristino...');
+                await finalizeAuthState(localAuth.session);
+              } else {
+                updateLoadingStep('Sessione locale scaduta, rimozione...');
+                localStorage.removeItem(STORAGE_KEY);
+                await finalizeAuthState(null);
+              }
+            } catch {
+              updateLoadingStep('Errore validazione sessione locale, rimozione...');
               localStorage.removeItem(STORAGE_KEY);
               await finalizeAuthState(null);
             }
-          } catch {
-            updateLoadingStep('Errore validazione sessione locale, rimozione...');
-            localStorage.removeItem(STORAGE_KEY);
+          } else {
             await finalizeAuthState(null);
           }
-        } else {
-          await finalizeAuthState(null);
         }
+      } catch (error) {
+        console.error('Errore nell\'inizializzazione auth:', error);
+        setAuthState(prev => ({
+          ...prev,
+          loading: false,
+          error: 'Errore critico nell\'inizializzazione',
+          loadingStep: 'Errore critico'
+        }));
       }
-    } catch (error) {
-      console.error('Errore nell\'inizializzazione auth:', error);
-      setAuthState(prev => ({
-        ...prev,
-        loading: false,
-        error: 'Errore critico nell\'inizializzazione',
-        loadingStep: 'Errore critico'
-      }));
-    }
-  }, [loadAuthFromStorage, finalizeAuthState, updateLoadingStep]);
+    };
 
-  useEffect(() => {
-    // Pulizia del listener precedente se esiste
-    if (authListenerRef.current) {
-      authListenerRef.current.subscription?.unsubscribe();
-    }
-
-    // Setup del nuovo listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        
-        // Gestisci solo eventi importanti, evita loop
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-          updateLoadingStep(`Evento autenticazione: ${event}`);
-          
-          // Evita chiamate multiple immediate
-          setTimeout(async () => {
-            await finalizeAuthState(session);
-          }, 100);
-        }
-      }
-    );
-
-    authListenerRef.current = { subscription };
-
-    // Inizializza l'autenticazione solo una volta
     initializeAuth();
 
+    // Cleanup
     return () => {
-      if (authListenerRef.current?.subscription) {
-        authListenerRef.current.subscription.unsubscribe();
+      if (authSubscription.current) {
+        authSubscription.current.unsubscribe();
+        authSubscription.current = null;
       }
     };
   }, []); // Dipendenze vuote per evitare re-inizializzazione
@@ -278,9 +293,12 @@ export const useSecureAuth = () => {
   const signOut = async () => {
     try {
       updateLoadingStep('Disconnessione in corso...');
-      const { error } = await supabase.auth.signOut();
       
+      // Pulisci lo storage locale
       localStorage.removeItem(STORAGE_KEY);
+      
+      // Disconnetti da Supabase
+      const { error } = await supabase.auth.signOut();
       
       if (error) {
         console.error('Errore durante il logout:', error);
@@ -288,6 +306,7 @@ export const useSecureAuth = () => {
         return { error };
       }
       
+      // Aggiorna lo stato
       setAuthState({
         user: null,
         session: null,
