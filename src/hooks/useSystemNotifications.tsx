@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -16,9 +15,13 @@ export interface SystemNotification {
   updated_at: string;
 }
 
+// Variabile globale per memorizzare il canale per utente
+const globalNotificationChannels: Record<string, any> = {};
+
 export const useSystemNotifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const channelName = user ? `notifications-${user.id}` : null;
 
   // Get user notifications
   const { data: notifications = [], isLoading } = useQuery({
@@ -90,14 +93,14 @@ export const useSystemNotifications = () => {
 
   // Real-time subscription
   useEffect(() => {
-    if (!user) return;
-
+    if (!user || !channelName) return;
+    if (globalNotificationChannels[user.id]) return;
     const channel = supabase
-      .channel(`notifications-${user.id}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*', // ascolta tutti gli eventi
           schema: 'public',
           table: 'system_notifications',
           filter: `user_id=eq.${user.id}`
@@ -107,11 +110,14 @@ export const useSystemNotifications = () => {
         }
       )
       .subscribe();
-
+    globalNotificationChannels[user.id] = channel;
     return () => {
-      supabase.removeChannel(channel);
+      if (globalNotificationChannels[user.id]) {
+        supabase.removeChannel(globalNotificationChannels[user.id]);
+        delete globalNotificationChannels[user.id];
+      }
     };
-  }, [user, queryClient]);
+  }, [channelName, user, queryClient]);
 
   const unreadCount = notifications.filter(n => !n.read_at).length;
 

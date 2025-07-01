@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -42,43 +41,56 @@ export const useChatSessions = () => {
   const { data: allSessions, isLoading: isLoadingAllSessions } = useQuery({
     queryKey: ['allChatSessions'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Prima prendi tutte le sessioni
+      const { data: sessions, error } = await supabase
         .from('chat_sessions')
-        .select(`
-          *,
-          profiles!chat_sessions_user_id_fkey (
-            first_name,
-            last_name,
-            email
-          )
-        `)
+        .select('*')
         .order('last_message_at', { ascending: false });
-
       if (error) throw error;
-      return data;
+      // Poi prendi i profili degli utenti associati
+      const userIds = (sessions || []).map(s => s.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email')
+        .in('id', userIds);
+      // Unisci i dati
+      // Filtra solo sessioni attive o in attesa
+      const filtered = (sessions || []).filter(s => s.status === 'active' || s.status === 'waiting');
+      // Tieni solo la sessione più recente per ogni utente
+      const uniqueByUser = Object.values(
+        filtered.reduce((acc, session) => {
+          if (!acc[session.user_id] || new Date(session.last_message_at) > new Date(acc[session.user_id].last_message_at)) {
+            acc[session.user_id] = session;
+          }
+          return acc;
+        }, {} as Record<string, any>)
+      );
+      // Unisci i dati profilo
+      const sessionsWithProfiles = uniqueByUser.map(session => ({
+        ...session,
+        profiles: profiles?.find(p => p.id === session.user_id) || null
+      }));
+      return sessionsWithProfiles;
     },
     enabled: isAdmin,
   });
 
-  // Create new chat session
+  // Create new chat session (ora accetta userId come parametro)
   const createSessionMutation = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error('User not authenticated');
-
+    mutationFn: async ({ userId }: { userId: string }) => {
       const { data, error } = await supabase
         .from('chat_sessions')
         .insert({
-          user_id: user.id,
-          status: 'active'
+          user_id: userId,
+          status: 'waiting'
         })
         .select()
         .single();
-
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chatSession'] });
+      queryClient.invalidateQueries({ queryKey: ['allChatSessions'] });
     },
   });
 
