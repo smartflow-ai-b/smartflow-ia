@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useChatSessions } from './useChatSessions';
 import { useChatMessages } from './useChatMessages';
@@ -10,7 +9,7 @@ export const useAdminChatManager = () => {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
-  const { allSessions, updateSession, isLoadingAllSessions } = useChatSessions();
+  const { allSessions, updateSession, isLoadingAllSessions, createSession } = useChatSessions();
   const { messages, sendMessage, isSendingMessage } = useChatMessages(selectedSessionId);
   const { adminStatus, updateAdminStatus } = useAdminStatus();
 
@@ -66,6 +65,27 @@ export const useAdminChatManager = () => {
     updateAdminStatus(newStatus);
   };
 
+  // Avvia una nuova sessione di chat con un utente
+  const handleStartNewSession = (userId: string) => {
+    // Cerca se esiste già una sessione attiva o in attesa con quell'utente
+    const existing = allSessions?.find(
+      (s) => s.user_id === userId && (s.status === 'active' || s.status === 'waiting')
+    );
+    if (existing) {
+      setSelectedSessionId(existing.id);
+      return;
+    }
+    // Crea una nuova sessione e seleziona la nuova sessione appena creata
+    createSession(
+      { userId },
+      {
+        onSuccess: (data: any) => {
+          setSelectedSessionId(data.id);
+        }
+      }
+    );
+  };
+
   return {
     allSessions: allSessions || [],
     selectedSessionId,
@@ -78,6 +98,7 @@ export const useAdminChatManager = () => {
     handleSendAdminMessage,
     handleCloseSession,
     handleTakeSession,
-    toggleAdminStatus
+    toggleAdminStatus,
+    handleStartNewSession
   };
 };

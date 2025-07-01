@@ -1,0 +1,133 @@
+-- POLICY CHAT_REQUESTS
+-- Solo mittente o destinatario può vedere la richiesta
+create policy "Can view own chat requests"
+on chat_requests
+for select
+using (
+  sender_id = auth.uid() or recipient_id = auth.uid()
+);
+
+-- Solo mittente può inserire una richiesta
+create policy "Can insert chat request"
+on chat_requests
+for insert
+with check (
+  sender_id = auth.uid()
+);
+
+-- Solo destinatario può aggiornare lo stato (accetta/rifiuta)
+create policy "Can update chat request status"
+on chat_requests
+for update
+using (
+  recipient_id = auth.uid()
+);
+
+-- Solo mittente o destinatario può cancellare la richiesta
+create policy "Can delete own chat request"
+on chat_requests
+for delete
+using (
+  sender_id = auth.uid() or recipient_id = auth.uid()
+);
+
+-- POLICY CHATS
+-- Un utente può vedere solo le chat di cui è membro
+create policy "Can view own chats"
+on chats
+for select
+using (
+  exists (
+    select 1 from chat_members
+    where chat_members.chat_id = chats.id
+      and chat_members.user_id = auth.uid()
+  )
+);
+
+-- Solo chi crea la chat può inserirla
+create policy "Can insert chat"
+on chats
+for insert
+with check (
+  created_by = auth.uid()
+);
+
+-- POLICY CHAT_MEMBERS
+-- Un utente può vedere solo le chat di cui è membro
+create policy "Can view own chat memberships"
+on chat_members
+for select
+using (
+  user_id = auth.uid()
+);
+
+-- Solo admin della chat può aggiungere membri
+create policy "Can add member if admin"
+on chat_members
+for insert
+with check (
+  exists (
+    select 1 from chat_members as cm
+    where cm.chat_id = chat_members.chat_id
+      and cm.user_id = auth.uid()
+      and cm.role = 'admin'
+  )
+);
+
+-- Un membro può uscire dalla chat (delete)
+create policy "Can remove self from chat"
+on chat_members
+for delete
+using (
+  user_id = auth.uid()
+);
+
+-- POLICY MESSAGES
+-- Un utente può vedere solo i messaggi delle chat di cui è membro
+create policy "Can view messages in own chats"
+on messages
+for select
+using (
+  exists (
+    select 1 from chat_members
+    where chat_members.chat_id = messages.chat_id
+      and chat_members.user_id = auth.uid()
+  )
+);
+
+-- Solo membri della chat possono inviare messaggi
+create policy "Can insert message if member"
+on messages
+for insert
+with check (
+  exists (
+    select 1 from chat_members
+    where chat_members.chat_id = messages.chat_id
+      and chat_members.user_id = auth.uid()
+  )
+);
+
+-- POLICY SYSTEM_NOTIFICATIONS
+-- Un utente può vedere solo le notifiche a lui destinate o broadcast
+create policy "Can view own notifications or broadcast"
+on system_notifications
+for select
+using (
+  (recipient_ids is null) or (auth.uid() = any(recipient_ids))
+);
+
+-- Solo admin può inviare notifiche (modifica con il tuo ruolo admin se serve)
+-- Esempio: se hai una colonna 'role' nella tabella users
+-- create policy "Only admin can insert notification"
+-- on system_notifications
+-- for insert
+-- with check (
+--   exists (select 1 from users where id = auth.uid() and role = 'admin')
+-- );
+
+-- ATTIVA LE RLS (Row Level Security) SU TUTTE LE TABELLE
+alter table chat_requests enable row level security;
+alter table chats enable row level security;
+alter table chat_members enable row level security;
+alter table messages enable row level security;
+alter table system_notifications enable row level security;
