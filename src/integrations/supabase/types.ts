@@ -68,6 +68,33 @@ export type Database = {
           },
         ]
       }
+      chat_requests: {
+        Row: {
+          created_at: string | null
+          id: string
+          recipient_id: string | null
+          sender_id: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          recipient_id?: string | null
+          sender_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          recipient_id?: string | null
+          sender_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       chat_sessions: {
         Row: {
           admin_id: string | null
