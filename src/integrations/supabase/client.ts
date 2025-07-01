@@ -6,55 +6,13 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://wotleycwvabvpufkrrfb.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvdGxleWN3dmFidnB1ZmtycmZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA2NjAxODQsImV4cCI6MjA2NjIzNjE4NH0.APx1buvd2RodRY8sD3pOzQYwq65OdeNasN1iaihRlfo";
 
-// Evita la creazione di multiple istanze
-let supabaseInstance: any = null;
-
-const createSupabaseClient = () => {
-  if (supabaseInstance) {
-    return supabaseInstance;
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    storage: window.localStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce',
+    storageKey: 'smartflow-supabase-auth-token'
   }
-
-  supabaseInstance = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    auth: {
-      storage: window.localStorage,
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      flowType: 'pkce',
-      storageKey: 'smartflow-supabase-auth-token',
-      debug: false
-    },
-    global: {
-      headers: {
-        'x-application-name': 'SmartFlow'
-      }
-    },
-    db: {
-      schema: 'public'
-    },
-    realtime: {
-      params: {
-        eventsPerSecond: 10
-      }
-    }
-  });
-
-  return supabaseInstance;
-};
-
-export const supabase = createSupabaseClient();
-
-// Event listener più semplice per evitare problemi
-let authListenerSetup = false;
-
-if (!authListenerSetup) {
-  supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_OUT') {
-      console.log('User signed out');
-      localStorage.removeItem('smartflow-auth-state');
-    } else if (event === 'TOKEN_REFRESHED') {
-      console.log('Token refreshed successfully');
-    }
-  });
-  authListenerSetup = true;
-}
+});
