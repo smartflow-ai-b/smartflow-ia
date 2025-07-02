@@ -23,7 +23,11 @@ import {
   Send
 } from 'lucide-react';
 
-const UserManagementInterface = () => {
+interface UserManagementInterfaceProps {
+  mobile?: boolean;
+}
+
+const UserManagementInterface: React.FC<UserManagementInterfaceProps> = ({ mobile }) => {
   const { users, isLoading, toggleBlockUser, promoteToAdmin, removeAdminRole, isUpdatingUser } = useUserManagement();
   const { sendNotification, isSendingNotification } = useSystemNotifications();
   const { toast } = useToast();
@@ -136,39 +140,34 @@ const UserManagementInterface = () => {
           <ScrollArea className="h-96">
             <div className="space-y-4">
               {filteredUsers.map((user) => (
-                <Card key={user.id} className="border">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-electric-blue-500 to-smart-purple-500 flex items-center justify-center">
+                <Card
+                  key={user.id}
+                  className="border"
+                  style={{ maxWidth: '100%', overflow: 'hidden' }}
+                >
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-electric-blue-500 to-smart-purple-500 flex items-center justify-center flex-shrink-0">
                           <User className="w-5 h-5 text-white" />
                         </div>
-                        <div>
-                          <h4 className="font-semibold">
-                            {user.first_name} {user.last_name}
-                          </h4>
-                          <p className="text-sm text-gray-600">{user.email}</p>
-                          <div className="flex gap-2 mt-1">
+                        <div className="min-w-0">
+                          <h4 className="font-semibold truncate max-w-[140px] sm:max-w-none">{user.first_name} {user.last_name}</h4>
+                          <p className="text-xs sm:text-sm text-gray-600 truncate max-w-[140px] sm:max-w-none">{user.email}</p>
+                          <div className="flex flex-wrap gap-2 mt-1">
                             {isUserAdmin(user) && (
-                              <Badge className="bg-yellow-100 text-yellow-800">
-                                Admin
-                              </Badge>
+                              <Badge className="bg-yellow-100 text-yellow-800">Admin</Badge>
                             )}
                             {user.is_blocked && (
-                              <Badge variant="destructive">
-                                Bloccato
-                              </Badge>
+                              <Badge variant="destructive">Bloccato</Badge>
                             )}
                             {user.projects && (
-                              <Badge variant="outline">
-                                {user.projects.length} progetti
-                              </Badge>
+                              <Badge variant="outline">{user.projects.length} progetti</Badge>
                             )}
                           </div>
                         </div>
                       </div>
-                      
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                         {/* Send Notification */}
                         <Dialog>
                           <DialogTrigger asChild>
@@ -176,6 +175,7 @@ const UserManagementInterface = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => setSelectedUser(user)}
+                              className="flex-1 min-w-[40px]"
                             >
                               <MessageSquare className="w-4 h-4" />
                             </Button>
@@ -229,13 +229,13 @@ const UserManagementInterface = () => {
                             </div>
                           </DialogContent>
                         </Dialog>
-
                         {/* Admin Toggle */}
                         <Button
                           variant={isUserAdmin(user) ? "destructive" : "default"}
                           size="sm"
                           onClick={() => handlePromoteUser(user.id, !isUserAdmin(user))}
                           disabled={isUpdatingUser}
+                          className="flex-1 min-w-[40px]"
                         >
                           {isUserAdmin(user) ? (
                             <UserMinus className="w-4 h-4" />
@@ -243,7 +243,6 @@ const UserManagementInterface = () => {
                             <Crown className="w-4 h-4" />
                           )}
                         </Button>
-
                         {/* Block Toggle */}
                         {user.is_blocked ? (
                           <Button
@@ -251,6 +250,7 @@ const UserManagementInterface = () => {
                             size="sm"
                             onClick={() => handleBlockUser(user.id, false)}
                             disabled={isUpdatingUser}
+                            className="flex-1 min-w-[40px]"
                           >
                             <ShieldOff className="w-4 h-4" />
                           </Button>
@@ -260,6 +260,7 @@ const UserManagementInterface = () => {
                               <Button
                                 variant="destructive"
                                 size="sm"
+                                className="flex-1 min-w-[40px]"
                               >
                                 <Shield className="w-4 h-4" />
                               </Button>
